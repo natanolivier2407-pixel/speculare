@@ -1674,6 +1674,11 @@ const KPI_DEFS = [
     sub:()=>`Actif − Passif sur ${NY} ans`},
 ];
 const KPI_BY_ID = {}; KPI_DEFS.forEach(k=>KPI_BY_ID[k.id]=k);
+// Sens de lecture : true = « plus c'est haut, mieux c'est ». Sert à surligner la
+// meilleure valeur dans la comparaison de scénarios.
+const KPI_HIGOOD = {ca:true, margeEBITDA:true, rn:true, tresoBas:true, roce:true, spread:true,
+                    fr:true, fcf:true, margeSecu:true, bilan:true,
+                    levier:false, bfrJours:false, bfrEur:false};
 const KPI_PINS_DEF = ['ca','margeEBITDA','rn','tresoBas'];
 const KPI_MAX_PINS = 4;
 let kpiPins = KPI_PINS_DEF.slice();
@@ -1688,7 +1693,7 @@ function pinsFromState(s){
 function kpiCardHTML(k,R,H){
   const lab = k.yr ? `${k.lab} · ${ANNEES[NY-1]}` : k.lab;
   const sub = k.sub ? k.sub(R,H) : '';
-  return `<div class="kpi"><span class="k-pin">📌</span>
+  return `<div class="kpi">
     <div class="k-lab">${lab}${k.tip?tipHTML(k.tip):''}</div>
     <div class="k-val">${k.fmt(k.get(R,H))}</div>
     ${sub?`<div class="k-sub">${sub}</div>`:''}</div>`;
@@ -2387,7 +2392,9 @@ function computeFromState(s){
     if(a){ const pct=ITEM[k].kind==='pct'; H.ov[k]= pct? a.map(v=>v/100) : a; }
   });
   const decs=instancesFromState(s).map(toEngineDec);
-  return compute(H, decs);
+  const R=compute(H, decs);
+  R.__H=H;   // les KPI qui comparent à une hypothèse (ROCE − WACC) ont besoin du H du scénario
+  return R;
 }
 const CMP_PAL=['#2a78d6','#1baf7a','#eda100','#4a3aa7','#eb6834','#e34948'];
 let cmpChart=null;
@@ -2399,9 +2406,9 @@ function openComparison(){
   const results=cols.map(c=>({...c, R:computeFromState(c.state)}));
 
   const rows=KPI_DEFS.map(k=>{
-    const vals=results.map(r=>k.get(r.R));
+    const vals=results.map(r=>k.get(r.R, r.R.__H));
     const finite=vals.filter(v=>isFinite(v));
-    const best = finite.length ? (k.hiGood?Math.max(...finite):Math.min(...finite)) : null;
+    const best = finite.length ? (KPI_HIGOOD[k.id]?Math.max(...finite):Math.min(...finite)) : null;
     const tds=vals.map(v=>{
       const isBest = best!==null && isFinite(v) && Math.abs(v-best)<1e-9;
       return `<td class="${isBest?'best':''}">${k.fmt(v)}</td>`;
@@ -2477,7 +2484,22 @@ document.addEventListener('click',e=>{
   e.preventDefault();
   navigate(go.dataset.go);
 });
-document.getElementById('btnRail').addEventListener('click',()=>appEl.classList.toggle('rail-min'));
+// La flèche pointe TOUJOURS vers l'action à venir : ⟨ pour replier, ⟩ pour déplier.
+function syncRail(){
+  const min=appEl.classList.contains('rail-min');
+  const b=document.getElementById('btnRail');
+  b.querySelector('i').textContent = min ? '⟩' : '⟨';
+  b.title = min ? 'Déplier le menu' : 'Réduire le menu';
+  const brand=document.querySelector('.rail-brand');
+  brand.title = min ? 'Déplier le menu' : '';
+}
+function toggleRail(){ appEl.classList.toggle('rail-min'); syncRail(); }
+document.getElementById('btnRail').addEventListener('click',toggleRail);
+// rail replié : le logo devient la zone de déploiement (cible large, réflexe courant)
+document.querySelector('.rail-brand').addEventListener('click',()=>{
+  if(appEl.classList.contains('rail-min')) toggleRail();
+});
+syncRail();
 document.getElementById('btnDrawerClose').addEventListener('click',()=>setDrawer(false));
 document.getElementById('btnDrawerTab').addEventListener('click',()=>setDrawer(true));
 document.querySelectorAll('.drawer-toggle').forEach(b=>
