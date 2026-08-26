@@ -1554,11 +1554,20 @@ function refresh(){
       return esc(d.nom)+' (dès '+ANNEES[d.vals.annee]+')';
     }).join(' · ');
     document.getElementById('simtxt').innerHTML=
-      `<b>Simulation active</b> — ${noms}. Les KPI affichent l'écart <i>vs</i> la trajectoire de base.`;
+      `<b>Simulation active</b> — ${noms}. Les résultats intègrent ${activeList.length>1?'ces décisions':'cette décision'}.`;
   }
 
+  // en-tête de vue et sous-titres contextuels
+  const hSub=document.getElementById('hSub');
+  if(hSub) hSub.textContent =
+    `${refs.length} référence${refs.length>1?'s':''} · ${ANNEES[0]} → ${ANNEES[NY-1]} · `
+    + (anyDec ? `${activeList.length} décision${activeList.length>1?'s':''} active${activeList.length>1?'s':''}`
+              : 'aucune décision active');
+  const tSub=document.getElementById('tresoSub');
+  if(tSub) tSub.textContent = 'point bas en '+ANNEES[lowIdx(R)];
+
   updateFundReadout(R);
-  renderKPIs(R,R0,anyDec); renderConseiller(R,H);
+  renderKPIs(R,H); renderStructure(R,H); renderStickybar(R); renderConseiller(R,H);
   renderTable(R); renderFinance(R); renderRefsAnalysis(R); renderDCF(R,H);   // parties DOM (sûres même onglet masqué)
   renderActiveCharts();                                     // graphes du seul onglet visible
   saveState(); updatePrintHead();
@@ -1567,79 +1576,227 @@ function refresh(){
 function renderActiveCharts(){
   if(!lastR) return;
   if(currentView==='sim'){
-    if(currentSub==='apercu')     renderCharts(lastR,lastR0,lastAnyDec);
+    if(currentSub==='apercu')     renderCharts(lastR);
     else if(currentSub==='refs')  renderRefsCharts(lastR);
     else                          renderFinanceCharts(lastR);
   } else if(currentView==='dcf'){ renderDCFCharts(lastR,lastH); }
 }
 function switchView(name){
   currentView=name;
-  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.view===name));
   document.querySelectorAll('.view').forEach(v=>{ v.hidden = (v.id!=='view-'+name); });
-  // panneau de gauche contextuel : sections et groupes d'hypothèses filtrés par onglet
+  // le tiroir est contextuel : sections et groupes d'hypothèses filtrés par vue
   const show=v=>(v===name||v==='both');
   document.querySelectorAll('.aside-sec').forEach(s=>{ s.hidden = !show(s.dataset.view||'sim'); });
   document.querySelectorAll('#inputs details').forEach(d=>{ d.hidden = !show(d.dataset.view||'sim'); });
   renderActiveCharts();
 }
-// sous-onglets de la vue Simulation (Vue d'ensemble | Financement)
 function switchSub(name){
   currentSub=name;
-  document.querySelectorAll('.subtab').forEach(b=>b.classList.toggle('on',b.dataset.sub===name));
   document.querySelectorAll('.subview').forEach(v=>{ v.hidden = (v.id!=='sub-'+name); });
   renderActiveCharts();
 }
 
-// --- KPI avec écart vs base ---
-// yr:true → le libellé reçoit le suffixe de la dernière année (dynamique). get() lit R[..][NY-1] au moment de l'appel.
-const KPI_DEFS = [
-  {lab:"CA",               yr:true, get:R=>R.CA[NY-1],          fmt:fEUR, dfmt:dEUR, hiGood:true,
-    tip:"Chiffre d'affaires prévu en dernière année (volume × prix)."},
-  {lab:"Marge EBITDA",     yr:true, get:R=>R.margeEBITDA[NY-1], fmt:fPCT, dfmt:dPTS, hiGood:true,
-    tip:"EBITDA / CA. Profitabilité opérationnelle avant amortissements, intérêts et impôts."},
-  {lab:"Résultat net",     yr:true, get:R=>R.RN[NY-1],          fmt:fEUR, dfmt:dEUR, hiGood:true,
-    tip:"Bénéfice final après charges financières et impôt."},
-  {lab:"Trésorerie — point bas", get:R=>Math.min(...R.tresoClot), fmt:fEUR, dfmt:dEUR, hiGood:true,
-    tip:"Le plus bas niveau de trésorerie sur tout l'horizon. S'il est négatif, il dimensionne le financement à sécuriser."},
-  {lab:"Dette nette / EBITDA", yr:true, get:R=>R.levier[NY-1], fmt:fX,   dfmt:dX,   hiGood:false,
-    tip:"Nombre d'années d'EBITDA nécessaires pour rembourser la dette nette. Seuil d'alerte bancaire ~3×."},
-  {lab:"BFR (jours de CA)",yr:true, get:R=>R.bfrJours[NY-1],    fmt:fJ,   dfmt:dJ,   hiGood:false,
-    tip:"Besoin en Fonds de Roulement en jours de CA : le cash immobilisé par le cycle (créances + stocks − dettes fournisseurs)."},
-  {lab:"ROCE ap. impôt",   yr:true, get:R=>R.ROCE[NY-1],        fmt:fPCT, dfmt:dPTS, hiGood:true,
-    tip:"Return On Capital Employed : rentabilité des capitaux engagés, après impôt (NOPAT / (immos + BFR)). À comparer au WACC : ROCE > WACC = création de valeur."},
-];
-function dEUR(x){ return (x>=0?'+':'−')+fEUR(Math.abs(x)); }
-function dPTS(x){ return (x>=0?'+':'−')+(Math.abs(x)*100).toFixed(1).replace('.',',')+' pts'; }
-function dX(x){ return (x>=0?'+':'−')+Math.abs(x).toFixed(1).replace('.',',')+'×'; }
-function dJ(x){ return (x>=0?'+':'−')+Math.round(Math.abs(x))+' j'; }
+// ---- Navigation par le rail : chaque entrée = un couple (vue, sous-vue) ----
+const NAV = {
+  apercu:{view:'sim', sub:'apercu'},
+  refs:  {view:'sim', sub:'refs'},
+  fin:   {view:'sim', sub:'fin'},
+  dcf:   {view:'dcf', sub:null},
+};
+function navigate(name){
+  const d=NAV[name]; if(!d) return;
+  switchView(d.view);
+  if(d.sub) switchSub(d.sub);
+  document.querySelectorAll('.rail .nav[data-go]').forEach(b=>b.classList.toggle('on', b.dataset.go===name));
+  const m=document.querySelector('main'); if(m) m.scrollTop=0;
+}
 
-function renderKPIs(R,R0,anyDec){
-  let html = KPI_DEFS.map(k=>{
-    const val=k.get(R);
-    let delta='';
-    if(anyDec){
-      const d=val-k.get(R0);
-      if(isFinite(d) && Math.abs(d)>1e-6){
-        const good = k.hiGood ? d>0 : d<0;
-        delta=`<div class="k-delta ${good?'good':'bad'}">${k.dfmt(d)} vs base</div>`;
-      } else {
-        delta=`<div class="k-delta flat">= vs base</div>`;
-      }
-    }
+// ============================================================
+//  KPI — 4 épinglés par l'utilisateur en tête, le reste en bande compacte
+// ============================================================
+// Chaque KPI porte une SOUS-LIGNE de contexte (dénominateur, année, seuil) : un chiffre
+// seul ne se lit pas. L'ancien écart « vs base » a été retiré — la comparaison de
+// scénarios vit dans « Comparer ».
+// yr:true → le libellé reçoit le suffixe de la dernière année. get() lit R[..][NY-1] à l'appel.
+
+// Postes d'analyse financière absents du moteur, dérivés du bilan.
+const bfrVal = (R,t)=> (R.stocks[t]||0) + (R.creances[t]||0) - (R.df[t]||0);
+const frVal  = (R,t)=> (R.cpClot[t]||0) + (R.detteClot[t]||0) - (R.immoClot[t]||0);
+const lowIdx = R => R.tresoClot.reduce((b,v,i,a)=> v<a[b]?i:b, 0);   // année du point bas
+const ratio2 = x => isFinite(x)? '×'+x.toFixed(2).replace('.',',') : '—';
+
+const KPI_DEFS = [
+  {id:'ca', lab:"Chiffre d'affaires", yr:true, get:R=>R.CA[NY-1], fmt:fEUR,
+    tip:"Chiffre d'affaires prévu en dernière année (volume × prix).",
+    sub:R=>{ const c0=R.CA[0]||0, cN=R.CA[NY-1]||0;
+             if(c0<=0 || NY<2) return '';
+             const m=cN/c0, t=Math.pow(m,1/(NY-1))-1;
+             return `${ratio2(m)} vs ${ANNEES[0]} · TCAM <b>${fPCT(t)}</b>`; }},
+  {id:'margeEBITDA', lab:"Marge EBITDA", yr:true, get:R=>R.margeEBITDA[NY-1], fmt:fPCT,
+    tip:"EBITDA / CA. Profitabilité opérationnelle avant amortissements, intérêts et impôts.",
+    sub:R=>`<b>${fEUR(R.EBITDA[NY-1])}</b> d'EBITDA`},
+  {id:'rn', lab:"Résultat net", yr:true, get:R=>R.RN[NY-1], fmt:fEUR,
+    tip:"Bénéfice final après charges financières et impôt.",
+    sub:R=>{ const ca=R.CA[NY-1]||0; if(ca<=0) return '';
+             return `<b>${fPCT(R.RN[NY-1]/ca)}</b> du CA`; }},
+  {id:'tresoBas', lab:"Trésorerie — point bas", get:R=>Math.min(...R.tresoClot), fmt:fEUR,
+    tip:"Le plus bas niveau de trésorerie sur tout l'horizon. S'il est négatif, il dimensionne le financement à sécuriser.",
+    // l'année du point bas est l'information qui déclenche l'action — pas seulement son montant
+    sub:R=>{ const i=lowIdx(R), neg=R.tresoClot.some(v=>v<0);
+             return `atteint en <b>${ANNEES[i]}</b> · ${neg?'passe en négatif':'jamais négative'}`; }},
+  {id:'levier', lab:"Dette nette / EBITDA", yr:true, get:R=>R.levier[NY-1], fmt:fX,
+    tip:"Nombre d'années d'EBITDA nécessaires pour rembourser la dette nette. Seuil d'alerte bancaire ~3×.",
+    sub:R=>`dette nette <b>${fEUR(R.detteNette[NY-1])}</b> · seuil 3×`},
+  {id:'bfrJours', lab:"BFR (jours de CA)", yr:true, get:R=>R.bfrJours[NY-1], fmt:fJ,
+    tip:"Besoin en Fonds de Roulement en jours de CA : le cash immobilisé par le cycle (créances + stocks − dettes fournisseurs).",
+    sub:R=>`soit <b>${fEUR(bfrVal(R,NY-1))}</b> immobilisés`},
+  {id:'roce', lab:"ROCE ap. impôt", yr:true, get:R=>R.ROCE[NY-1], fmt:fPCT,
+    tip:"Return On Capital Employed : rentabilité des capitaux engagés, après impôt (NOPAT / (immos + BFR)). À comparer au WACC : ROCE > WACC = création de valeur.",
+    sub:(R,H)=>`coût du capital <b>${fPCT((H.wacc||0))}</b>`},
+  {id:'spread', lab:"ROCE − WACC", yr:true, get:(R,H)=>R.ROCE[NY-1]-((H.wacc||0)), fmt:fPCT,
+    tip:"Écart entre la rentabilité des capitaux engagés et leur coût. Positif = création de valeur.",
+    sub:(R,H)=>(R.ROCE[NY-1]-((H.wacc||0)))>=0 ? 'création de valeur' : '<b>destruction</b> de valeur'},
+  {id:'fr', lab:"Fonds de roulement", yr:true, get:R=>frVal(R,NY-1), fmt:fEUR,
+    tip:"Capitaux permanents − actif immobilisé : les ressources stables qui restent pour financer le cycle d'exploitation.",
+    sub:R=>`BFR <b>${fEUR(bfrVal(R,NY-1))}</b>`},
+  {id:'bfrEur', lab:"BFR (en valeur)", yr:true, get:R=>bfrVal(R,NY-1), fmt:fEUR,
+    tip:"Stocks + créances clients − dettes fournisseurs : le cash gelé par le cycle d'exploitation.",
+    sub:R=>`<b>${fJ(R.bfrJours[NY-1])}</b> de chiffre d'affaires`},
+  {id:'fcf', lab:"Free cash flow", yr:true, get:R=>R.FCF[NY-1], fmt:fEUR,
+    tip:"Flux d'exploitation − investissements : le cash réellement disponible avant financement.",
+    sub:R=>`cumulé <b>${fEUR(R.FCF.reduce((a,b)=>a+b,0))}</b> sur ${NY} ans`},
+  {id:'margeSecu', lab:"Marge de sécurité", yr:true, get:R=>R.margeSecu[NY-1], fmt:fPCT,
+    tip:"Part du chiffre d'affaires qui peut disparaître avant d'atteindre le point mort.",
+    sub:R=>`point mort <b>${fEUR(R.pointMort[NY-1])}</b>`},
+  {id:'bilan', lab:"Équilibre du bilan", get:R=>R.ctrl.every(x=>Math.abs(x)<1)?1:0,
+    fmt:v=>`<span class="badge ${v?'ok':'ko'}">${v?'✓ équilibré':'✗ écart'}</span>`,
+    tip:"Contrôle Actif − Passif sur toutes les années. Un écart signale une incohérence de modélisation.",
+    sub:()=>`Actif − Passif sur ${NY} ans`},
+];
+const KPI_BY_ID = {}; KPI_DEFS.forEach(k=>KPI_BY_ID[k.id]=k);
+const KPI_PINS_DEF = ['ca','margeEBITDA','rn','tresoBas'];
+const KPI_MAX_PINS = 4;
+let kpiPins = KPI_PINS_DEF.slice();
+
+// Un scénario enregistré AVANT cette version n'a pas le champ : on retombe sur le défaut,
+// sinon la vue d'ensemble s'affiche sans aucun KPI, et sans erreur en console.
+function pinsFromState(s){
+  const p = s && Array.isArray(s.kpiPins) ? s.kpiPins.filter(id=>KPI_BY_ID[id]) : [];
+  return p.length ? p.slice(0,KPI_MAX_PINS) : KPI_PINS_DEF.slice();
+}
+
+function kpiCardHTML(k,R,H){
+  const lab = k.yr ? `${k.lab} · ${ANNEES[NY-1]}` : k.lab;
+  const sub = k.sub ? k.sub(R,H) : '';
+  return `<div class="kpi"><span class="k-pin">📌</span>
+    <div class="k-lab">${lab}${k.tip?tipHTML(k.tip):''}</div>
+    <div class="k-val">${k.fmt(k.get(R,H))}</div>
+    ${sub?`<div class="k-sub">${sub}</div>`:''}</div>`;
+}
+function renderKPIs(R,H){
+  const pinned = kpiPins.map(id=>KPI_BY_ID[id]).filter(Boolean);
+  const rest   = KPI_DEFS.filter(k=>kpiPins.indexOf(k.id)<0);
+  document.getElementById('kpis').innerHTML = pinned.map(k=>kpiCardHTML(k,R,H)).join('');
+  document.getElementById('kpisMore').innerHTML = rest.map(k=>{
     const lab = k.yr ? `${k.lab} · ${ANNEES[NY-1]}` : k.lab;
-    return `<div class="kpi"><div class="k-lab">${lab}${k.tip?tipHTML(k.tip):''}</div>
-      <div class="k-val">${k.fmt(val)}</div>${delta}</div>`;
+    return `<div><div class="k-lab">${lab}</div><div class="k-val">${k.fmt(k.get(R,H))}</div></div>`;
   }).join('');
-  const bilanOK=R.ctrl.every(x=>Math.abs(x)<1);
-  html += `<div class="kpi"><div class="k-lab">Équilibre du bilan</div>
-    <div class="k-val"><span class="badge ${bilanOK?'ok':'ko'}">${bilanOK?'✓ équilibré':'✗ écart'}</span></div>
-    <div class="k-sub">Actif − Passif sur ${NY} ans</div></div>`;
-  document.getElementById('kpis').innerHTML=html;
 }
 
 // ============================================================
 //  CONSEILLER CFO — moteur de règles : diagnostic → constat chiffré → levier
 // ============================================================
+// ---- Modale « Choisir les KPI » : 4 au maximum en tête de la vue d'ensemble ----
+function buildPinModal(){
+  const m=document.createElement('div'); m.className='modal-overlay'; m.id='pinModal';
+  m.innerHTML=`<div class="modal">
+    <div class="modal-head"><h2>Choisir les KPI mis en avant</h2>
+      <button type="button" class="modal-close" id="pinClose">✕</button></div>
+    <p class="modal-sub">Les <b>${KPI_MAX_PINS}</b> indicateurs cochés s'affichent en grand format.
+      Les autres restent lisibles dans la bande compacte, juste en dessous. Le choix est enregistré
+      avec le scénario.</p>
+    <div class="pin-grid" id="pinGrid"></div>
+    <div class="modal-foot"><span id="pinCount"></span>
+      <button type="button" class="btn-primary" id="pinDone">Terminé</button></div>
+  </div>`;
+  document.body.appendChild(m);
+  const grid=document.getElementById('pinGrid');
+  const render=()=>{
+    const full = kpiPins.length>=KPI_MAX_PINS;
+    grid.innerHTML = KPI_DEFS.map(k=>{
+      const on = kpiPins.indexOf(k.id)>=0;
+      return `<label class="pin-row ${on?'on':''} ${full&&!on?'full':''}">
+        <input type="checkbox" data-id="${k.id}" ${on?'checked':''} ${full&&!on?'disabled':''}>
+        <span>${k.lab}</span></label>`;
+    }).join('');
+    document.getElementById('pinCount').textContent =
+      `${kpiPins.length} / ${KPI_MAX_PINS} sélectionné${kpiPins.length>1?'s':''}`;
+  };
+  grid.addEventListener('change',e=>{
+    const cb=e.target.closest('input[type=checkbox]'); if(!cb) return;
+    const id=cb.dataset.id, i=kpiPins.indexOf(id);
+    if(cb.checked){ if(i<0 && kpiPins.length<KPI_MAX_PINS) kpiPins.push(id); }
+    else if(i>=0) kpiPins.splice(i,1);
+    render(); refresh();
+  });
+  const close=()=>m.classList.remove('open');
+  document.getElementById('pinClose').addEventListener('click',close);
+  document.getElementById('pinDone').addEventListener('click',close);
+  m.addEventListener('click',e=>{ if(e.target===m) close(); });
+  document.getElementById('btnPins').addEventListener('click',()=>{ render(); m.classList.add('open'); });
+}
+
+// ---- Carte « Structure financière » : l'équilibre FR / BFR / trésorerie, puis les ratios ----
+// FR − BFR = trésorerie nette. C'est la base de l'analyse financière, et le moteur ne
+// produisait ni le FR ni le BFR en valeur : les deux sont dérivés du bilan.
+function renderStructure(R,H){
+  const t=NY-1;
+  const fr=frVal(R,t), bfr=bfrVal(R,t), tn=R.tresoClot[t];
+  const ech=Math.max(Math.abs(fr),Math.abs(bfr),Math.abs(tn),1);
+  const pc=v=>Math.min(100, Math.abs(v)/ech*100).toFixed(1);
+  const st=(good)=>good?'ok':'warn';
+  const bar=(lab,val,fmt,color,cls)=>`<div class="tline">
+      <span>${lab}</span><span class="${cls||''}">${fmt(val)}</span>
+      <div class="track"><i class="${color}" style="width:${pc(val)}%"></i></div></div>`;
+
+  // seuils : lecture bancaire usuelle
+  const lev=R.levier[t], jours=R.bfrJours[t], secu=R.margeSecu[t];
+  const rt=(lab,val,fmt,good,ratio)=>`<div class="tline">
+      <span>${lab}</span><span class="${st(good)}">${fmt(val)}</span>
+      <div class="track"><i class="${st(good)}" style="width:${Math.min(100,Math.max(0,ratio*100)).toFixed(1)}%"></i></div></div>`;
+
+  document.getElementById('structSub').textContent = 'position en '+ANNEES[t];
+  document.getElementById('structBody').innerHTML =
+    `<p class="tline-h">Équilibre financier — en valeur</p>`
+    + bar('Fonds de roulement', fr, fEUR, 'neutral', fr>=0?'ok':'bad')
+    + bar('− Besoin en FR',     bfr, fEUR, 'warn', '')
+    + bar('= Trésorerie nette', tn, fEUR, tn>=0?'ok':'bad', tn>=0?'ok':'bad')
+    + `<p class="tline-eq">${
+        fr>=bfr
+          ? "FR &gt; BFR : le cycle d'exploitation est financé par des ressources stables, l'excédent alimente la trésorerie."
+          : "FR &lt; BFR : le cycle d'exploitation n'est pas couvert par les ressources stables — la trésorerie comble l'écart."
+      }</p>`
+    + `<p class="tline-h mt">Ratios — face à leur seuil</p>`
+    + rt('Dette nette / EBITDA', lev,   fX,   !(lev>3),      isFinite(lev)?lev/6:0)
+    + rt('BFR (jours de CA)',    jours, fJ,   jours<=60,     jours/120)
+    + rt('Marge de sécurité',    secu,  fPCT, secu>=0.20,    secu)
+    + rt('ROCE − WACC',          R.ROCE[t]-((H.wacc||0)), fPCT,
+         R.ROCE[t]>=(H.wacc||0), Math.abs(R.ROCE[t]-((H.wacc||0)))/0.20);
+}
+
+// ---- Bandeau collant : les sorties clés restent lisibles pendant qu'on règle ----
+function renderStickybar(R){
+  const t=NY-1, bas=Math.min(...R.tresoClot), bilanOK=R.ctrl.every(x=>Math.abs(x)<1);
+  const it=(lab,val,cls)=>`<div class="sb-item"><span>${lab}</span><b class="${cls||''}">${val}</b></div>`;
+  document.getElementById('stickybar').innerHTML =
+      it('CA '+ANNEES[t], fEUR(R.CA[t]))
+    + it('EBITDA', fPCT(R.margeEBITDA[t]))
+    + it('Résultat net', fEUR(R.RN[t]), cls(R.RN[t]))
+    + it('Tréso point bas', fEUR(bas), cls(bas))
+    + it('Bilan', bilanOK?'✓ équilibré':'✗ écart', bilanOK?'pos':'neg')
+    + `<div class="sb-right"><span class="sb-dot"></span>recalcul instantané</div>`;
+}
+
 function diagnose(R,H){
   const F=[], last=NY-1;
   const pointBas=Math.min(...R.tresoClot);
@@ -1742,16 +1899,18 @@ function renderConseiller(R,H){
 }
 
 function renderTable(R){
-  const head=`<tr><th>(en €)</th>${ANNEES.map(a=>`<th>${a}</th>`).join('')}</tr>`;
+  // la dernière année reçoit la classe `cur` : c'est celle que lisent les KPI
+  const last=NY-1;
+  const head=`<tr><th>(en €)</th>${ANNEES.map((a,i)=>`<th class="${i===last?'cur':''}">${a}</th>`).join('')}</tr>`;
   const line=(lab,arr,fmt=fEUR,color=false,sec=false,tot=false)=>{
-    const tds=arr.map(v=>{
-      const c = color? cls(v):'';
+    const tds=arr.map((v,i)=>{
+      const c = [color? cls(v):'', i===last?'cur':''].filter(Boolean).join(' ');
       return `<td class="${c}">${fmt(v)}</td>`;
     }).join('');
     return `<tr class="${sec?'sec':''} ${tot?'tot':''}"><td>${lab}</td>${tds}</tr>`;
   };
   // bandeau de section : une ligne pleine largeur qui coupe le tableau en états financiers
-  const sect=(lab)=>`<tr class="sec"><td>${lab}</td>${ANNEES.map(()=>'<td></td>').join('')}</tr>`;
+  const sect=(lab)=>`<tr class="grouprow"><td colspan="${NY+1}">${lab}</td></tr>`;
   const cession = R.resExcept.some(x=>Math.abs(x)>0.5);
   let h=head;
 
@@ -1817,42 +1976,41 @@ function mkChart(id,cfg){ if(charts[id])charts[id].destroy(); charts[id]=new Cha
 // Palette validée (dataviz) : catégorielle bleu/aqua/jaune + statuts vert/rouge
 const C={blue:'#2a78d6',aqua:'#1baf7a',yellow:'#eda100',good:'#0ca30c',critical:'#d03b3b',warning:'#fab219',
          blueLight:'#a9c7ef',aquaLight:'#8fd8bd',baseGray:'#cdccc4',
-         ink2:'#52514e',muted:'#898781',grid:'#e1e0d9'};
+         ink2:'#52514e',muted:'#898781',grid:'#e1e0d9',axis:'#c3c2b7'};
 const BAR={borderRadius:4,borderSkipped:false,maxBarThickness:30};
 const GRID={color:C.grid}, TICK={color:C.muted,font:{size:10}};
 const axes={x:{grid:{display:false},ticks:TICK},y:{grid:GRID,ticks:{...TICK,callback:v=>(v/1000)+'k'}}};
 const LEG=(show=true)=>({display:show,labels:{color:C.ink2,boxWidth:10,boxHeight:10,usePointStyle:true,font:{size:11}}});
 
-function renderCharts(R,R0,anyDec){
-  const baseLine = (data,label)=>({type:'line',label:label,data:data,borderColor:C.muted,
-    borderDash:[5,4],pointRadius:0,borderWidth:1.5,tension:.3,backgroundColor:'transparent'});
-
-  const actDs=[{label:'CA',data:R.CA,backgroundColor:C.blue,...BAR}];
-  if(anyDec) actDs.push({label:'CA (sans décision)',data:R0.CA,backgroundColor:C.blueLight,...BAR});
-  actDs.push({label:'EBITDA',data:R.EBITDA,backgroundColor:C.aqua,...BAR});
-  if(anyDec) actDs.push({label:'EBITDA (sans décision)',data:R0.EBITDA,backgroundColor:C.aquaLight,...BAR});
-  mkChart('cActivite',{type:'bar',data:{labels:ANNEES,datasets:actDs},
+function renderCharts(R){
+  mkChart('cActivite',{type:'bar',data:{labels:ANNEES,datasets:[
+      {label:'CA',data:R.CA,backgroundColor:C.blue,...BAR},
+      {label:'EBITDA',data:R.EBITDA,backgroundColor:C.aqua,...BAR}
+    ]},
     options:{responsive:true,plugins:{legend:LEG()},scales:axes}});
 
+  // Le remplissage bascule au passage du zéro : un trou de trésorerie se voit d'un coup d'œil,
+  // sans avoir à lire l'axe.
   mkChart('cTreso',{type:'line',data:{labels:ANNEES,datasets:[
       {label:'Trésorerie',data:R.tresoClot,borderColor:C.blue,borderWidth:2,
-       backgroundColor:'rgba(42,120,214,.10)',fill:true,tension:.3,
-       pointRadius:4,pointHoverRadius:6,
+       fill:{target:{value:0}, above:'rgba(42,120,214,.10)', below:'rgba(208,59,59,.20)'},
+       tension:.3,pointRadius:4,pointHoverRadius:6,
        pointBackgroundColor:R.tresoClot.map(v=>v<0?C.critical:C.good),
-       pointBorderColor:R.tresoClot.map(v=>v<0?C.critical:C.good)}
-    ].concat(anyDec?[baseLine(R0.tresoClot,'Sans décision')]:[])},
-    options:{responsive:true,plugins:{legend:LEG(anyDec)},scales:axes}});
+       pointBorderColor:R.tresoClot.map(v=>v<0?C.critical:C.good)},
+      {label:'Zéro',data:ANNEES.map(()=>0),borderColor:C.axis,borderWidth:1,pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,plugins:{legend:LEG(false)},scales:axes}});
 
-  const rnDs=[{label:'Résultat net',data:R.RN,...BAR,backgroundColor:R.RN.map(v=>v<0?C.critical:C.good)}];
-  if(anyDec) rnDs.push({label:'RN (sans décision)',data:R0.RN,...BAR,backgroundColor:C.baseGray});
-  mkChart('cRN',{type:'bar',data:{labels:ANNEES,datasets:rnDs},
-    options:{responsive:true,plugins:{legend:LEG(anyDec)},scales:axes}});
+  mkChart('cRN',{type:'bar',data:{labels:ANNEES,datasets:[
+      {label:'Résultat net',data:R.RN,...BAR,backgroundColor:R.RN.map(v=>v<0?C.critical:C.good)}
+    ]},
+    options:{responsive:true,plugins:{legend:LEG(false)},scales:axes}});
 
   mkChart('cLevier',{type:'line',data:{labels:ANNEES,datasets:[
       {label:'Dette nette/EBITDA',data:R.levier,borderColor:C.yellow,backgroundColor:C.yellow,
        borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:.3},
       {label:'Seuil 3×',data:ANNEES.map(()=>3),borderColor:C.critical,borderDash:[6,4],borderWidth:1.5,pointRadius:0}
-    ].concat(anyDec?[baseLine(R0.levier,'Sans décision')]:[])},
+    ]},
     options:{responsive:true,plugins:{legend:LEG()},
       scales:{x:{grid:{display:false},ticks:TICK},y:{grid:GRID,ticks:{...TICK,callback:v=>v+'×'}}}}});
 }
@@ -2055,7 +2213,7 @@ function currentState(){
   syncDecFromDOM();
   const decInst=decInstances.map(o=>({id:o.id, type:o.type, nom:o.nom, active:o.active,
                                       vals:Object.assign({},o.vals), ov:JSON.parse(JSON.stringify(o.ov||{}))}));
-  return {company:docCompany, subtitle:docSubtitle, openMode, fund:{...fund}, H, loans:JSON.parse(JSON.stringify(financeLoans)), refs:JSON.parse(JSON.stringify(refs)), decInstances:decInst, ov:JSON.parse(JSON.stringify(overrides))};
+  return {company:docCompany, subtitle:docSubtitle, openMode, fund:{...fund}, H, loans:JSON.parse(JSON.stringify(financeLoans)), refs:JSON.parse(JSON.stringify(refs)), decInstances:decInst, ov:JSON.parse(JSON.stringify(overrides)), kpiPins:kpiPins.slice()};
 }
 function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(currentState())); }catch(e){/* ignore */} }
 function applyState(s){
@@ -2068,6 +2226,7 @@ function applyState(s){
   refs = migrateRefsFromState(s); if(document.getElementById('refList')) renderRefList();
   overrides = (s.ov && typeof s.ov==='object' && !Array.isArray(s.ov)) ? JSON.parse(JSON.stringify(s.ov)) : {};
   decInstances = instancesFromState(s);   // format instances, sinon migration ancien format {dec:{...}}
+  kpiPins = pinsFromState(s);             // absent des scénarios d'avant → repli sur le défaut
   buildDecisions();
   finSummary();
   syncFundInputs(); renderOpeningMode();
@@ -2301,12 +2460,30 @@ document.getElementById('reset').addEventListener('click',()=>{
   renderLoanList(); finSummary();
   decInstances=defaultInstances(); buildDecisions();
   openMode='treso'; fund={...FUND_DEF}; syncFundInputs(); renderOpeningMode();
+  kpiPins=KPI_PINS_DEF.slice();
   applyHorizon();   // remet l'horizon à 5 ans et recalcule
 });
 
-// ---- Onglets ----
-document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));
-document.querySelectorAll('.subtab').forEach(b=>b.addEventListener('click',()=>switchSub(b.dataset.sub)));
+// ============================================================
+//  NAVIGATION ET REPLIS (rail + tiroir)
+// ============================================================
+const appEl = document.getElementById('app');
+function setDrawer(open){ appEl.classList.toggle('drawer-off', !open); }
+
+// un seul écouteur : rail, fil d'Ariane et renvois « Ouvrir … → » portent tous data-go
+document.addEventListener('click',e=>{
+  const go = e.target.closest && e.target.closest('[data-go]');
+  if(!go) return;
+  e.preventDefault();
+  navigate(go.dataset.go);
+});
+document.getElementById('btnRail').addEventListener('click',()=>appEl.classList.toggle('rail-min'));
+document.getElementById('btnDrawerClose').addEventListener('click',()=>setDrawer(false));
+document.getElementById('btnDrawerTab').addEventListener('click',()=>setDrawer(true));
+document.querySelectorAll('.drawer-toggle').forEach(b=>
+  b.addEventListener('click',()=>setDrawer(appEl.classList.contains('drawer-off'))));
+// l'entrée « Comparer » du rail rejoue le bouton du tiroir, pour n'avoir qu'un seul gestionnaire
+document.getElementById('railCompare').addEventListener('click',()=>document.getElementById('btnCompare').click());
 
 // ---- Démarrage ----
 buildDecisions();
@@ -2315,11 +2492,12 @@ buildOpeningMode();
 buildFinanceModal();
 buildRefModal();
 buildCapModal();
+buildPinModal();
 buildYearModal();   // en dernier : son overlay doit se superposer aux autres modales
 loadState();      // restaure les saisies précédentes si présentes
 renderScenarioList();
 applyHorizon();   // synchronise l'horizon (NY/ANNEES) avec le paramètre restauré, puis recalcule
-switchView('sim');   // applique le filtrage contextuel du panneau de gauche
+navigate('apercu');   // vue par défaut + filtrage contextuel du tiroir
 
 // ============================================================
 //  FEUILLE DU BAS (mobile) — l'aside coulisse en bottom sheet

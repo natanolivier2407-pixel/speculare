@@ -7,28 +7,82 @@
     --good:#0ca30c; --good-text:#006300; --critical:#d03b3b; --warning:#fab219;
     --accent:var(--blue);
     --shadow:0 1px 2px rgba(11,11,11,.05), 0 1px 3px rgba(11,11,11,.04);
+    /* navy = le fond du logo (logo/speculare_logo.svg) */
+    --navy:#0a2540;
+    --rail-w:200px; --drawer-w:330px;
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--plane);color:var(--ink)}
-  header{padding:14px 26px;background:var(--surface);border-bottom:1px solid var(--border);
-    display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-  header h1{font-size:23px;margin:0;letter-spacing:-.3px;font-weight:700}
-  header .slogan{color:var(--muted);font-size:13px}
-  header .co-sep{color:var(--muted);font-weight:400}
-  #coName{color:var(--blue);border-bottom:1px dashed var(--blue);cursor:text;outline:none;padding:0 2px}
-  #coName:focus{background:var(--blue-soft);border-radius:3px}
-  .hdr-actions{margin-left:auto;display:flex;gap:8px}
-  .btn-export{padding:8px 15px;background:var(--blue);color:#fff;border:none;
-    border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:600}
-  .btn-export:hover{background:#1c5cab}
-  .btn-export.ghost{background:var(--surface);color:var(--blue);border:1px solid var(--blue)}
-  .btn-export.ghost:hover{background:var(--blue-soft)}
   .print-head,.print-foot{display:none}
-  .wrap{display:grid;grid-template-columns:350px 1fr;gap:0;min-height:calc(100vh - 58px)}
-  /* ---- Panneau gauche ---- */
-  aside{background:var(--surface);border-right:1px solid var(--border);padding:16px;overflow-y:auto;max-height:calc(100vh - 58px)}
+  /* Ascenseurs escamotés : le défilement fonctionne, la barre ne s'affiche plus. */
+  main,aside,.tblwrap,.rail{scrollbar-width:none;-ms-overflow-style:none}
+  main::-webkit-scrollbar,aside::-webkit-scrollbar,
+  .tblwrap::-webkit-scrollbar,.rail::-webkit-scrollbar{width:0;height:0}
+
+  /* ================= GRILLE : rail | résultats | tiroir ================= */
+  /* Les deux extrémités se replient. États pilotés par des CLASSES sur .wrap. */
+  .wrap{display:grid;grid-template-columns:var(--rail-w) minmax(0,1fr) var(--drawer-w);
+    gap:0;min-height:100vh}
+  .wrap.rail-min{--rail-w:56px}
+  .wrap.drawer-off{--drawer-w:0px}
+
+  /* ---- Rail de navigation ---- */
+  .rail{background:var(--navy);color:#fff;display:flex;flex-direction:column;
+    padding:14px 0;overflow:hidden;max-height:100vh}
+  .rail-brand{display:flex;align-items:center;gap:10px;padding:2px 13px 18px;min-width:0}
+  .rail-mark{width:30px;height:30px;border-radius:7px;background:#fff;color:var(--navy);flex:none;
+    font-family:Georgia,'Times New Roman',serif;font-size:19px;
+    display:flex;align-items:center;justify-content:center}
+  .rail-name{font-family:Georgia,'Times New Roman',serif;font-size:17px;white-space:nowrap}
+  .rail-sec{font-size:10px;letter-spacing:.9px;text-transform:uppercase;color:rgba(255,255,255,.36);
+    font-weight:700;padding:14px 16px 7px;white-space:nowrap}
+  .rail .nav{display:flex;align-items:center;gap:11px;width:100%;padding:9px 16px;min-width:0;
+    background:none;border:none;border-left:3px solid transparent;cursor:pointer;text-align:left;
+    color:#a9bdd4;font-family:inherit;font-size:13.5px;font-weight:600}
+  .rail .nav:hover{background:rgba(255,255,255,.07);color:#fff}
+  .rail .nav.on{background:rgba(42,120,214,.20);color:#fff;border-left-color:var(--blue)}
+  .rail .nav i{font-style:normal;width:16px;text-align:center;font-size:14px;flex:none}
+  .rail .nav em{font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rail-foot{margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,.09)}
+  .rail-min-btn{display:flex;align-items:center;gap:11px;width:100%;padding:9px 16px;
+    background:none;border:none;cursor:pointer;font-family:inherit;
+    color:rgba(255,255,255,.45);font-size:12px;font-weight:600}
+  .rail-min-btn:hover{color:#fff}
+  .rail-min-btn i{font-style:normal;width:16px;text-align:center;font-size:13px;flex:none}
+  /* rail replié : seules les icônes restent */
+  .rail-min .rail-name,.rail-min .rail-sec,.rail-min .rail .nav em,
+  .rail-min .rail-min-btn span{display:none}
+  .rail-min .rail .nav,.rail-min .rail-min-btn{justify-content:center;padding-left:0;padding-right:0}
+  .rail-min .rail-brand{justify-content:center;padding:2px 0 18px}
+
+  /* ---- Tiroir des hypothèses (3e colonne ; le HTML garde son ordre) ---- */
+  aside{grid-column:3;background:var(--surface-2);border-left:1px solid var(--border);
+    padding:0 16px 46px;overflow-y:auto;max-height:100vh}
+  .drawer-off aside{display:none}
+  .drawer-h{position:sticky;top:0;z-index:3;background:var(--navy);color:#fff;
+    margin:0 -16px 16px;padding:13px 16px;display:flex;align-items:center;gap:8px}
+  .drawer-h b{font-size:13px;font-weight:700}
+  .drawer-h .x{margin-left:auto;flex:none;width:26px;height:26px;border-radius:7px;cursor:pointer;
+    font-size:13px;line-height:1;font-family:inherit;
+    border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.10);color:#fff}
+  .drawer-h .x:hover{background:rgba(255,255,255,.22)}
+  /* fondu de bas de tiroir : remplace l'ascenseur supprimé pour dire « ça continue » */
+  .drawer-fade{position:sticky;bottom:0;height:34px;margin-top:-34px;pointer-events:none;
+    background:linear-gradient(rgba(247,247,245,0),var(--surface-2))}
+  /* languette de réouverture */
+  .drawer-tab{display:none;position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:20;
+    writing-mode:vertical-rl;background:var(--blue);color:#fff;border:none;cursor:pointer;
+    padding:18px 9px;border-radius:10px 0 0 10px;font-size:12px;font-weight:700;letter-spacing:.5px;
+    font-family:inherit;box-shadow:-2px 0 10px rgba(11,11,11,.15)}
+  .drawer-off .drawer-tab{display:block}
+  /* les cartes du tiroir ressortent en blanc sur le fond gris */
+  aside details,aside .scn,aside summary{background:var(--surface)}
+  aside summary:hover{background:var(--blue-soft)}
+  aside details[open]>summary{border-bottom:1px solid var(--border)}
+
   .sheet-handle{display:none}   /* poignée de la feuille du bas — visible seulement sur mobile */
-  .aside-h{font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:4px 0 10px;font-weight:700}
+  .aside-h{font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-2);
+    margin:20px 0 10px;font-weight:700;border-left:3px solid var(--blue);padding-left:8px}
   /* décisions */
   .dec{border:1px solid var(--border);border-radius:10px;margin-bottom:9px;overflow:hidden;background:var(--surface);transition:.15s}
   .dec.on{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
@@ -147,7 +201,6 @@
   .fin-open{width:100%;padding:11px 12px;background:var(--blue-soft);border:1px solid var(--blue);
     color:var(--blue);border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;text-align:left;
     display:flex;align-items:center;gap:8px}
-  .fin-open::before{content:"⚙";font-size:14px;opacity:.85}
   .fin-open:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
   /* mode d'équilibrage du bilan d'ouverture */
   .open-mode{margin:2px 0 14px;padding:11px 12px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2)}
@@ -284,22 +337,23 @@
   .fin-sec-h span{font-size:12.5px;font-weight:500;color:var(--muted)}
   .fin-charts{grid-template-columns:repeat(3,1fr)}
   @media(max-width:900px){.fin-charts{grid-template-columns:1fr}}
-  /* onglets */
-  .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border)}
-  .tab{padding:9px 18px;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;
-    font-size:13.5px;font-weight:600;color:var(--muted);margin-bottom:-1px}
-  .tab:hover{color:var(--ink)}
-  .tab.on{color:var(--blue);border-bottom-color:var(--blue)}
   .view[hidden]{display:none}
-  /* sous-onglets (dans Simulation) */
-  .subtabs{display:flex;gap:6px;margin-bottom:16px}
-  .subtab{padding:7px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;
-    cursor:pointer;font-size:12.5px;font-weight:600;color:var(--ink-2)}
-  .subtab:hover{border-color:var(--blue);color:var(--blue)}
-  .subtab.on{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
   .subview[hidden]{display:none}
-  .fin-intro{color:var(--ink-2);font-size:13px;margin:0 0 16px;line-height:1.55;max-width:840px}
-  .dcf-sub{color:var(--ink-2);font-size:13px;margin:0 0 16px;line-height:1.5;max-width:820px}
+  /* ---- En-tête de vue + fil d'Ariane de retour ---- */
+  .view-h{display:flex;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap;min-width:0}
+  .view-h h2{margin:0;font-size:19px;font-weight:700;letter-spacing:-.3px}
+  .view-h .h-sub{font-size:12.5px;color:var(--muted)}
+  .view-h .h-act{margin-left:auto;display:flex;gap:8px;flex:none}
+  .hbtn{padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);
+    color:var(--ink-2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .hbtn:hover{border-color:var(--blue);color:var(--blue)}
+  .crumb{display:inline-block;margin-bottom:10px;padding:0;border:none;background:none;
+    font-family:inherit;font-size:12.5px;font-weight:600;color:var(--blue);cursor:pointer}
+  .crumb:hover{text-decoration:underline}
+  /* phrase d'amorce de chaque vue */
+  .lead{color:var(--ink-2);font-size:12.5px;margin:0 0 16px;line-height:1.6;max-width:900px}
+  .lead code{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:1px 7px;
+    font-family:inherit;font-size:11.5px;font-weight:600;color:var(--blue);white-space:nowrap}
   .dcf-sens-h{font-size:13px;color:var(--ink-2);font-weight:600;margin:22px 0 10px}
   /* scénarios */
   .scn-list{margin-bottom:8px}
@@ -331,20 +385,44 @@
   .modal select{padding:5px 9px;border:1px solid var(--border);border-radius:7px;background:var(--surface);
     color:var(--ink);font-size:12.5px;font-weight:600;cursor:pointer}
   /* ---- Résultats ---- */
-  main{padding:18px 22px;overflow-y:auto;max-height:calc(100vh - 58px)}
+  main{grid-column:2;overflow-y:auto;max-height:100vh;display:flex;flex-direction:column}
+  .page{padding:20px 24px 26px;flex:1}
   .simbar{display:none;align-items:center;gap:10px;background:var(--blue-soft);border:1px solid var(--border);
     border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--ink-2)}
   .simbar.on{display:flex}
   .simbar .dot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex:none}
-  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-bottom:16px}
-  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 15px;box-shadow:var(--shadow)}
-  .kpi .k-lab{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
-  .kpi .k-val{font-size:22px;font-weight:700;margin-top:5px;color:var(--ink);letter-spacing:-.3px}
-  .kpi .k-sub{font-size:11px;color:var(--muted);margin-top:2px}
-  .kpi .k-delta{display:inline-block;font-size:11px;font-weight:700;margin-top:7px;padding:2px 8px;border-radius:20px}
-  .kpi .k-delta.good{color:var(--good-text);background:rgba(12,163,12,.12)}
-  .kpi .k-delta.bad{color:var(--critical);background:rgba(208,59,59,.12)}
-  .kpi .k-delta.flat{color:var(--muted);background:var(--surface-2)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-bottom:12px}
+  /* les 4 KPI épinglés par l'utilisateur, en tête de la vue d'ensemble */
+  #kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 15px;
+    box-shadow:var(--shadow);position:relative}
+  .kpi .k-lab{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;
+    font-weight:600;padding-right:14px}
+  .kpi .k-val{font-size:22px;font-weight:700;margin-top:5px;color:var(--ink);letter-spacing:-.4px;
+    white-space:nowrap;font-variant-numeric:tabular-nums}
+  /* sous-ligne de contexte : le dénominateur, l'année, la comparaison qui donne le sens */
+  .kpi .k-sub{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.4}
+  .kpi .k-sub b{color:var(--ink-2);font-weight:600}
+  .kpi .k-pin{position:absolute;top:9px;right:10px;font-size:10px;color:var(--blue);opacity:.5}
+  /* les KPI non épinglés, en bande compacte */
+  .kpi-more{display:flex;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;box-shadow:var(--shadow);margin-bottom:18px;overflow:hidden}
+  .kpi-more>div{flex:1 1 0;min-width:120px;padding:10px 14px;border-right:1px solid var(--border)}
+  .kpi-more>div:last-child{border-right:none}
+  .kpi-more .k-lab{font-size:9.5px;color:var(--muted);text-transform:uppercase;
+    letter-spacing:.5px;font-weight:600}
+  .kpi-more .k-val{font-size:15px;font-weight:700;margin-top:3px;white-space:nowrap;
+    font-variant-numeric:tabular-nums}
+  /* modale « Choisir les KPI » */
+  .pin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+  .pin-row{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--border);
+    border-radius:9px;font-size:12.5px;cursor:pointer;background:var(--surface)}
+  .pin-row:hover{border-color:var(--blue)}
+  .pin-row.on{border-color:var(--blue);background:var(--blue-soft)}
+  .pin-row input{accent-color:var(--blue);width:15px;height:15px;flex:none;cursor:pointer}
+  .pin-row span{flex:1;min-width:0}
+  .pin-row.full{opacity:.5}
+  .pin-row.full.on{opacity:1}
   .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
   .badge.ok{background:rgba(12,163,12,.12);color:var(--good-text)}
   .badge.ko{background:rgba(208,59,59,.12);color:var(--critical)}
@@ -372,25 +450,99 @@
   /* minmax(0,1fr) : sans ça une colonne ne peut pas devenir plus étroite que son contenu
      (un canvas large fige la grille et empêche les graphes de suivre la largeur d'écran) */
   .charts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-bottom:18px}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 15px;box-shadow:var(--shadow)}
-  .card h3{margin:0 0 8px;font-size:12.5px;color:var(--ink-2);font-weight:600}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
   .card canvas{max-height:210px;max-width:100%}
-  table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
-  .tblwrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;overflow-x:auto;box-shadow:var(--shadow)}
-  th,td{padding:6px 9px;text-align:right;white-space:nowrap}
-  th{color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)}
-  td:first-child,th:first-child{text-align:left;color:var(--ink)}
-  tr.sec td{background:var(--surface-2);font-weight:700;border-top:1px solid var(--border);color:var(--ink)}
-  tr.tot td{font-weight:700;color:var(--ink)}
+  /* en-tête de carte : titre · précision · renvoi vers la vue détaillée */
+  .card-h{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;min-width:0}
+  .card-h h3{margin:0;font-size:13.5px;font-weight:700;color:var(--ink);flex:none;white-space:nowrap}
+  .card-h .sub{font-size:11.5px;color:var(--muted);min-width:0;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .card-go{margin-left:auto;flex:none;border:none;background:none;cursor:pointer;font-family:inherit;
+    font-size:12px;font-weight:600;color:var(--blue);padding:0}
+  .card-go:hover{text-decoration:underline}
+  .tbl-h{margin:2px 2px 10px}
+  /* ---- carte « Structure financière » ---- */
+  .tline{display:grid;grid-template-columns:minmax(0,1fr) auto 40%;gap:10px;align-items:center;
+    font-size:12.5px;margin-bottom:10px}
+  .tline>span:first-child{color:var(--ink-2);font-weight:600;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tline>span:nth-child(2){font-weight:700;text-align:right;white-space:nowrap;
+    font-variant-numeric:tabular-nums}
+  .tline>span.ok{color:var(--good-text)} .tline>span.warn{color:#a06a00} .tline>span.bad{color:var(--critical)}
+  .track{height:9px;border-radius:20px;background:var(--surface-2);position:relative;overflow:hidden}
+  .track>i{position:absolute;top:0;bottom:0;left:0;border-radius:20px}
+  /* la couleur dit le statut face au seuil — ce n'est pas de la décoration */
+  .track>i.ok{background:var(--good)} .track>i.warn{background:var(--warning)}
+  .track>i.bad{background:var(--critical)} .track>i.neutral{background:var(--blue)}
+  .tline-h{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
+    font-weight:700;margin:0 0 10px}
+  .tline-h.mt{margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+  .tline-eq{font-size:11.5px;color:var(--muted);margin:2px 0 0;line-height:1.5}
+
+  /* ================= TABLEAUX ================= */
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px;font-variant-numeric:tabular-nums}
+  .tblwrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:0;overflow:auto;max-height:min(560px,calc(100vh - 170px));box-shadow:var(--shadow)}
+  th,td{padding:7px 11px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border)}
+  /* en-tête collant : sur 46 lignes, on perd sinon les années au premier défilement */
+  th{position:sticky;top:0;z-index:3;background:var(--surface);color:var(--muted);
+    font-weight:600;border-bottom:2px solid var(--border)}
+  /* première colonne figée */
+  td:first-child,th:first-child{text-align:left;color:var(--ink);
+    position:sticky;left:0;z-index:2;background:var(--surface)}
+  th:first-child{z-index:4}
+  /* bandeau de section, pleine largeur */
+  tr.grouprow td,tr.grouprow td:first-child{background:var(--navy);color:#fff;font-weight:700;
+    font-size:11px;letter-spacing:.7px;text-transform:uppercase;padding:6px 11px}
+  tr.tot td,tr.tot td:first-child{font-weight:700;color:var(--ink);background:var(--surface-2)}
+  /* dernière année mise en avant */
+  th.cur,td.cur{background:var(--blue-soft)}
+  tr.tot td.cur{background:#dfeaf8}
+  /* surlignage de la ligne survolée */
+  tbody tr:not(.grouprow):hover td,
+  tbody tr:not(.grouprow):hover td:first-child{background:#eef4fb}
+  tbody tr:not(.grouprow):hover td.cur{background:#dde9f7}
   .pos{color:var(--good-text)} .neg{color:var(--critical)}
+
+  /* ================= BANDEAU DE SYNTHÈSE, COLLÉ EN BAS ================= */
+  .stickybar{position:sticky;bottom:0;z-index:6;background:var(--surface);
+    border-top:1px solid var(--border);padding:9px 24px;display:flex;align-items:center;
+    gap:24px;font-size:12.5px;flex-wrap:wrap;box-shadow:0 -2px 8px rgba(11,11,11,.05)}
+  .sb-item{display:flex;align-items:baseline;gap:7px;min-width:0}
+  .sb-item span{color:var(--muted);font-size:10.5px;text-transform:uppercase;
+    letter-spacing:.5px;font-weight:600}
+  .sb-item b{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .stickybar .sb-right{margin-left:auto;display:flex;align-items:center;gap:9px;
+    color:var(--muted);font-size:11.5px}
+  .sb-dot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex:none}
   /* ================= MOBILE (≤768px) — Lot 1 : layout de base ================= */
   @media(max-width:768px){
     /* empilement + la page scrolle naturellement (pas de conteneurs à scroll imbriqués) */
     .wrap{grid-template-columns:1fr;min-height:0}
     aside,main{min-width:0}   /* évite le débordement horizontal dû à un enfant non compressible (tableau) */
-    main{max-height:none;overflow:visible;padding:14px 14px calc(78px + env(safe-area-inset-bottom))}   /* place pour la feuille en position peek */
+    main{grid-column:auto;max-height:none;overflow:visible;display:block}
+    .page{padding:14px 14px calc(78px + env(safe-area-inset-bottom))}   /* place pour la feuille en position peek */
+    /* le rail redevient une barre horizontale défilante, en haut.
+       🔴 min-width:0 obligatoire : sans lui, les entrées en `nowrap` imposent leur largeur
+       minimale à la colonne de grille et TOUTE la page déborde horizontalement. */
+    .rail{grid-column:auto;min-width:0;flex-direction:row;align-items:center;gap:2px;max-height:none;
+      padding:0 8px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
+      position:sticky;top:0;z-index:30}
+    .rail-brand{padding:0 10px 0 4px;flex:none}
+    .rail-brand .rail-mark{width:26px;height:26px;font-size:16px}
+    .rail-name,.rail-sec,.rail-foot{display:none}
+    .rail .nav{width:auto;flex:none;padding:12px 12px;border-left:none;
+      border-bottom:3px solid transparent;white-space:nowrap}
+    .rail .nav.on{border-left-color:transparent;border-bottom-color:var(--blue);background:none}
+    .rail .nav em{display:inline}
+    /* le tiroir redevient la feuille du bas ; sa languette et son en-tête n'ont plus de sens */
+    .drawer-tab,.drawer-h,.drawer-fade{display:none!important}
+    .view-h .h-act .drawer-toggle{display:none}
+    .stickybar{display:none}          /* la feuille en position peek occupe déjà le bas */
+    .drawer-off aside{display:block}  /* l'état « replié » du desktop ne s'applique pas ici */
+    .tblwrap{max-height:70vh}
     /* Lot 4 — l'aside devient une FEUILLE DU BAS (bottom sheet) */
-    aside{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:40;
+    aside{background:var(--surface);position:fixed;left:0;right:0;bottom:0;top:auto;z-index:40;
       width:auto;height:60px;max-height:92vh;padding:0 14px calc(22px + env(safe-area-inset-bottom));
       border-right:none;border-top:1px solid var(--border);border-radius:16px 16px 0 0;
       box-shadow:0 -8px 30px rgba(11,11,11,.16);overflow:hidden;
@@ -404,14 +556,9 @@
       margin:0 -14px 8px;padding:9px 0 11px;border-radius:16px 16px 0 0;border-bottom:1px solid var(--border)}
     .sheet-grip{width:40px;height:4px;border-radius:3px;background:var(--axis)}
     .sheet-title{font-size:13px;font-weight:700;color:var(--ink)}
-    /* header compact */
-    header{padding:11px 14px;gap:10px}
-    header h1{font-size:19px}
-    .hdr-actions{gap:6px}
-    .btn-export{padding:8px 11px;font-size:12px}
-    .btn-word{display:none}   /* « Export CSV » → « ⤓ CSV » */
+    .view-h h2{font-size:17px}
     /* KPIs sur 2 colonnes */
-    .kpis{grid-template-columns:1fr 1fr;gap:10px}
+    .kpis,#kpis{grid-template-columns:1fr 1fr;gap:10px}
     .kpi{padding:11px 12px}
     .kpi .k-val{font-size:19px}
     /* graphes en 1 colonne + canvas borné à la carte (sinon la largeur inline 709px déborde) */
@@ -419,17 +566,9 @@
     .card{overflow:hidden}
     .card canvas{max-width:100%!important}
     html,body{overflow-x:hidden}   /* filet de sécurité : aucun débordement horizontal de page */
-    /* onglets/sous-onglets : scroll horizontal, jamais de retour à la ligne */
-    .tabs,.subtabs{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-    .tabs::-webkit-scrollbar,.subtabs::-webkit-scrollbar{display:none}
-    .tab,.subtab{white-space:nowrap;flex:none}
-    /* Lot 2 — tableaux au pouce : 1ère colonne (libellés) figée pendant le scroll horizontal */
-    .tblwrap{padding-left:0;padding-right:0}   /* colonne figée flush : pas de gouttière où le scroll transparaît */
+    /* Lot 2 — tableaux au pouce : l'ombre portée signale que la 1ère colonne est figée */
     .tblwrap td:first-child,.tblwrap th:first-child{
-      position:sticky;left:0;z-index:5;background:var(--surface);
       box-shadow:1px 0 0 0 var(--border), 7px 0 8px -5px rgba(11,11,11,.22)}
-    #tbl tr.sec td:first-child{background:var(--surface-2)}   /* garde le fond des lignes de section */
-    #tbl tr.tot td:first-child,#tbl tr th:first-child{background:var(--surface)}   /* opaque partout, y compris l'en-tête */
     /* Lot 3 — cibles tactiles (~40px mini) */
     .st-btn{width:40px;height:40px;font-size:18px}
     .stepper .numfield{min-height:40px;font-size:15px;width:66px}
@@ -437,8 +576,6 @@
     .ctrl input[type=range]{height:34px}
     .loan-modebtn{padding:9px 14px}
     .om-field input[type=number].numfield{min-height:42px}
-    .tab{padding:12px 16px}
-    .subtab{padding:10px 15px}
     .dec-chk{width:20px;height:20px}
     .scn input[type=checkbox]{width:18px;height:18px}
     .scn-btn{padding:11px}
@@ -458,15 +595,21 @@
     @page{size:A4;margin:14mm 12mm 20mm}
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
     html,body{background:#fff;width:auto;overflow:visible}
-    aside,.reset,.simbar,header,.btn-export,.conseil,.tabs,.subtabs,.fin-intro,.dcf-sub{display:none!important}
-    .wrap{grid-template-columns:1fr;min-height:0}
-    main{max-height:none;overflow:visible;padding:0;width:auto;max-width:100%}
+    /* tout le châssis d'écran disparaît : rail, tiroir, languette, bandeau collant, aides */
+    aside,.rail,.drawer-tab,.stickybar,.reset,.simbar,.conseil,
+    .crumb,.lead,.view-h .h-act,.card-go,.kpi .k-pin{display:none!important}
+    .wrap{display:block;grid-template-columns:1fr;min-height:0}
+    main{grid-column:auto;display:block;max-height:none;overflow:visible;width:auto;max-width:100%}
+    .page{padding:0}
     .kpi,.card,.tblwrap,.finding{box-shadow:none;break-inside:avoid}
     .kpi,.card,.tblwrap{border-color:#d9d9d3}
+    #kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
     .charts{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
     .charts canvas{width:100%!important;height:auto!important;max-width:100%}
-    .tblwrap{overflow:visible}
-    .fin-sec-h,.dcf-intro h2{break-after:avoid;font-size:15px;margin-bottom:12px}
+    /* 🔴 le collant doit redevenir statique : sinon l'en-tête se répète en travers des pages */
+    .tblwrap{overflow:visible;max-height:none}
+    th,td:first-child,th:first-child{position:static!important}
+    .view-h h2{break-after:avoid;font-size:15px;margin-bottom:12px}
     /* En-tête de document */
     .print-head{display:block;margin-bottom:18px;padding-bottom:12px;border-bottom:2.5px solid var(--ink)}
     .print-head .ph-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}

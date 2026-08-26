@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<!-- saved from url=(0115)file:///C:/Users/UTILISATEUR/Downloads/tony_starter_kit/tuteur_cfo/cours_modelisation_cfo/industriex_dashboard.html -->
-<html lang="fr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-
+<html lang="fr">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Specularé — Business plan, financement &amp; valorisation</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a2540'/%3E%3Ctext x='16' y='23' font-size='20' fill='white' text-anchor='middle' font-family='Georgia,serif'%3ES%3C/text%3E%3C/svg%3E">
@@ -9,370 +9,209 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header>
-  <h1>Specularé</h1>
-  <div class="hdr-actions">
-    <button class="btn-export ghost" id="btnCsv">⤓ <span class="btn-word">Export </span>CSV</button>
-    <button class="btn-export" id="btnExport">⤓ <span class="btn-word">Export </span>PDF</button>
-  </div>
-</header>
 
-<div class="wrap">
-  <aside>
+<div class="wrap" id="app">
+
+  <!-- ===================== RAIL DE NAVIGATION ===================== -->
+  <nav class="rail">
+    <div class="rail-brand"><span class="rail-mark">S</span><span class="rail-name">Specularé</span></div>
+
+    <div class="rail-sec">Analyse</div>
+    <button type="button" class="nav on" data-go="apercu"><i>▤</i><em>Vue d'ensemble</em></button>
+    <button type="button" class="nav" data-go="refs"><i>◫</i><em>Par référence</em></button>
+    <button type="button" class="nav" data-go="fin"><i>≡</i><em>Financement</em></button>
+    <button type="button" class="nav" data-go="dcf"><i>◈</i><em>Valorisation DCF</em></button>
+
+    <div class="rail-sec">Scénarios</div>
+    <button type="button" class="nav" id="railCompare"><i>⇄</i><em>Comparer</em></button>
+
+    <div class="rail-sec">Sortie</div>
+    <button type="button" class="nav" id="btnExport"><i>⤓</i><em>Export PDF</em></button>
+    <button type="button" class="nav" id="btnCsv"><i>⤒</i><em>Export CSV</em></button>
+
+    <div class="rail-foot">
+      <button type="button" class="rail-min-btn" id="btnRail" title="Réduire le menu"><i>⟨</i><span>Réduire</span></button>
+    </div>
+  </nav>
+
+  <!-- ===================== RÉSULTATS ===================== -->
+  <main>
+    <div class="page">
+    <div class="print-head" id="printHead"></div>
+
+    <!-- ---------- Vue Simulation ---------- -->
+    <div class="view" id="view-sim">
+
+      <!-- ····· Vue d'ensemble ····· -->
+      <div class="subview" id="sub-apercu">
+        <div class="view-h">
+          <h2>Vue d'ensemble</h2>
+          <span class="h-sub" id="hSub"></span>
+          <div class="h-act">
+            <button type="button" class="hbtn" id="btnPins">⚑ Choisir les KPI</button>
+            <button type="button" class="hbtn drawer-toggle" id="btnDrawer">Hypothèses ⟩</button>
+          </div>
+        </div>
+        <p class="lead">Les hypothèses se règlent dans le panneau de droite&nbsp;: le calcul se refait à chaque frappe.
+          Tout paramètre peut suivre une trajectoire année par année via <code>Évolution</code>, en valeurs ou en
+          <code>taux</code>. Les décisions s'ajoutent aux hypothèses et se cumulent entre elles.</p>
+
+        <div class="simbar" id="simbar"><span class="dot"></span><span id="simtxt"></span></div>
+
+        <div class="kpis" id="kpis"></div>
+        <div class="kpi-more" id="kpisMore"></div>
+
+        <div class="charts">
+          <div class="card">
+            <div class="card-h"><h3>Activité</h3><span class="sub">CA &amp; EBITDA</span>
+              <button type="button" class="card-go" data-go="refs">Ouvrir Par référence →</button></div>
+            <canvas id="cActivite"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-h"><h3>Trésorerie de clôture</h3><span class="sub" id="tresoSub"></span>
+              <button type="button" class="card-go" data-go="fin">Ouvrir Financement →</button></div>
+            <canvas id="cTreso"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-h"><h3>Résultat net</h3></div>
+            <canvas id="cRN"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-h"><h3>Dette nette / EBITDA</h3><span class="sub">seuil d'alerte 3×</span></div>
+            <canvas id="cLevier"></canvas>
+          </div>
+        </div>
+
+        <div class="charts">
+          <div class="card" id="cardStruct">
+            <div class="card-h"><h3>Structure financière</h3><span class="sub" id="structSub"></span>
+              <button type="button" class="card-go" data-go="fin">Ouvrir Financement →</button></div>
+            <div id="structBody"></div>
+          </div>
+          <div class="conseil" id="conseil"></div>
+        </div>
+
+        <div class="card-h tbl-h"><h3>Pack financier</h3>
+          <span class="sub">compte de résultat · flux · bilan · indicateurs</span></div>
+        <div class="tblwrap"><table id="tbl"></table></div>
+      </div><!-- /sub-apercu -->
+
+      <!-- ····· Par référence ····· -->
+      <div class="subview" id="sub-refs" hidden>
+        <button type="button" class="crumb" data-go="apercu">← Retour à la vue d'ensemble</button>
+        <div class="view-h">
+          <h2>Analyse par référence</h2><span class="h-sub" id="refAnSub"></span>
+          <div class="h-act"><button type="button" class="hbtn drawer-toggle">Hypothèses ⟩</button></div>
+        </div>
+        <p class="lead">Décomposition du chiffre d'affaires et de la marge par référence produit, sur tout l'horizon.
+          Le <b>mix</b> montre comment le poids de chaque référence dans le CA évolue. Reflète les décisions actives.
+          Les références s'éditent via <b>« Gérer les références »</b>, dans le panneau de droite.</p>
+        <div class="kpis" id="refKpis"></div>
+        <div class="charts">
+          <div class="card"><div class="card-h"><h3>CA par référence</h3></div><canvas id="cRefCA"></canvas></div>
+          <div class="card"><div class="card-h"><h3>Mix — poids dans le CA</h3></div><canvas id="cRefMix"></canvas></div>
+          <div class="card"><div class="card-h"><h3>Marge sur coûts variables</h3></div><canvas id="cRefMarge"></canvas></div>
+          <div class="card"><div class="card-h"><h3>Taux de marge par référence</h3></div><canvas id="cRefTx"></canvas></div>
+        </div>
+        <div class="tblwrap"><table id="refTbl"></table></div>
+      </div><!-- /sub-refs -->
+
+      <!-- ····· Financement ····· -->
+      <div class="subview" id="sub-fin" hidden>
+        <button type="button" class="crumb" data-go="apercu">← Retour à la vue d'ensemble</button>
+        <div class="view-h">
+          <h2>Financement — portefeuille d'emprunts</h2><span class="h-sub" id="finSecSub"></span>
+          <div class="h-act"><button type="button" class="hbtn drawer-toggle">Hypothèses ⟩</button></div>
+        </div>
+        <p class="lead">Analyse des emprunts configurés via <b>« Planifier emprunts &amp; remboursements »</b>, dans le
+          panneau de droite. Chaque emprunt est en <b>annuités constantes</b>&nbsp;: l'annuité totale reste fixe, mais la
+          part d'intérêts <b>baisse</b> et la part de capital remboursé <b>monte</b> au fil des années — jusqu'à un
+          capital restant dû nul.</p>
+        <div class="charts fin-charts">
+          <div class="card"><div class="card-h"><h3>Capital restant dû</h3></div><canvas id="cResteDu"></canvas></div>
+          <div class="card"><div class="card-h"><h3>Intérêts payés / an</h3></div><canvas id="cInterets"></canvas></div>
+          <div class="card"><div class="card-h"><h3>Remboursement du capital / an</h3></div><canvas id="cCapital"></canvas></div>
+        </div>
+        <div class="tblwrap"><table id="finTbl"></table></div>
+      </div><!-- /sub-fin -->
+
+    </div><!-- /view-sim -->
+
+    <!-- ---------- Vue Valorisation DCF ---------- -->
+    <div class="view" id="view-dcf" hidden>
+      <button type="button" class="crumb" data-go="apercu">← Retour à la vue d'ensemble</button>
+      <div class="view-h">
+        <h2>Valorisation par les flux actualisés</h2><span class="h-sub">DCF</span>
+        <div class="h-act"><button type="button" class="hbtn drawer-toggle">Hypothèses ⟩</button></div>
+      </div>
+      <p class="lead">Valeur de l'entreprise = somme des <b>flux de trésorerie disponibles (FCFF)</b> actualisés au coût
+        du capital (WACC), plus une <b>valeur terminale</b>. Règle WACC/g et multiple de sortie dans le groupe
+        « Valorisation DCF » du panneau de droite.</p>
+      <div class="kpis" id="dcfKpis"></div>
+      <div class="charts">
+        <div class="card"><div class="card-h"><h3>Flux actualisés par année + valeur terminale</h3></div><canvas id="cDcfPV"></canvas></div>
+        <div class="card"><div class="card-h"><h3>Pont de valeur : EV → capitaux propres</h3></div><canvas id="cDcfBridge"></canvas></div>
+      </div>
+      <div class="tblwrap"><table id="dcfTbl"></table></div>
+      <h3 class="dcf-sens-h">Sensibilité de la valeur d'entreprise — WACC × croissance perpétuelle</h3>
+      <div class="tblwrap"><table id="dcfSens" class="cmp-table"></table></div>
+    </div><!-- /view-dcf -->
+
+    </div><!-- /page -->
+
+    <!-- bandeau de synthèse, collé en bas -->
+    <div class="stickybar" id="stickybar"></div>
+  </main>
+
+  <!-- ===================== TIROIR : HYPOTHÈSES &amp; DÉCISIONS ===================== -->
+  <aside class="drawer">
     <div class="sheet-handle" id="sheetHandle" role="button" tabindex="0" aria-label="Ouvrir ou fermer les réglages">
       <span class="sheet-grip"></span><span class="sheet-title">Réglages</span>
     </div>
-    <div class="aside-sec" data-view="sim">
-    <div class="aside-h">Scénarios</div>
-    <div id="scnList" class="scn-list"><div class="scn-empty">Aucun scénario enregistré. Définir des hypothèses et des décisions, puis « Enregistrer ».</div></div>
-    <div class="scn-actions">
-      <button class="scn-btn" id="btnSaveScn">Enregistrer</button>
-      <button class="scn-btn primary" id="btnCompare">Comparer</button>
+
+    <div class="drawer-h">
+      <b>Hypothèses &amp; décisions</b>
+      <button type="button" class="x" id="btnDrawerClose" title="Fermer le panneau">✕</button>
     </div>
-    </div><!-- /aside-sec Scénarios -->
+
     <div class="aside-sec" data-view="sim">
-    <div class="aside-h" style="margin-top:18px">Décisions à simuler</div>
-    <div id="decisions"></div><!-- cartes générées dynamiquement par buildDecisions() depuis decInstances -->
-    </div><!-- /aside-sec Décisions -->
-    <div class="aside-h" style="margin-top:18px">Hypothèses</div>
-    <div id="inputs"><details><summary>Paramètres clés</summary><div class="grp"><div class="ctrl">
-        <label for="in_volN"><span>Volume vendu en N</span><b id="lab_volN">10 000</b></label>
-        <div class="row">
-          <input type="range" id="in_volN" min="0" max="50000" step="500" value="10000">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="volN" data-d="-1">−</button>
-            <input type="number" id="num_volN" class="numfield" min="0" max="50000" step="500" value="10000">
-            <button type="button" class="st-btn" data-k="volN" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_gVol"><span>Croissance volumes</span><b id="lab_gVol">8 %</b></label>
-        <div class="row">
-          <input type="range" id="in_gVol" min="-10" max="30" step="0.5" value="8">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="gVol" data-d="-1">−</button>
-            <input type="number" id="num_gVol" class="numfield" min="-10" max="30" step="0.5" value="8">
-            <button type="button" class="st-btn" data-k="gVol" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_prixN"><span>Prix unitaire en N</span><b id="lab_prixN">50&nbsp;€</b></label>
-        <div class="row">
-          <input type="range" id="in_prixN" min="0" max="500" step="5" value="50">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="prixN" data-d="-1">−</button>
-            <input type="number" id="num_prixN" class="numfield" min="0" max="500" step="5" value="50">
-            <button type="button" class="st-btn" data-k="prixN" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_tauxCV"><span>Taux de charges variables<span class="tip" title="Part du chiffre d&#39;affaires consommée par les charges variables (matières, sous-traitance…). Ce qui reste = marge sur coûts variables.">i</span></span><b id="lab_tauxCV">45 %</b></label>
-        <div class="row">
-          <input type="range" id="in_tauxCV" min="10" max="90" step="1" value="45">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="tauxCV" data-d="-1">−</button>
-            <input type="number" id="num_tauxCV" class="numfield" min="10" max="90" step="1" value="45">
-            <button type="button" class="st-btn" data-k="tauxCV" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_capex"><span>CAPEX courant / an</span><b id="lab_capex">150 000&nbsp;€</b></label>
-        <div class="row">
-          <input type="range" id="in_capex" min="0" max="1000000" step="10000" value="150000">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="capex" data-d="-1">−</button>
-            <input type="number" id="num_capex" class="numfield" min="0" max="1000000" step="10000" value="150000">
-            <button type="button" class="st-btn" data-k="capex" data-d="1">+</button>
-          </div>
-        </div></div></div></details><details><summary>Coûts &amp; marge (avancé)</summary><div class="grp"><div class="ctrl">
-        <label for="in_gPrix"><span>Croissance prix</span><b id="lab_gPrix">2 %</b></label>
-        <div class="row">
-          <input type="range" id="in_gPrix" min="-5" max="15" step="0.5" value="2">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="gPrix" data-d="-1">−</button>
-            <input type="number" id="num_gPrix" class="numfield" min="-5" max="15" step="0.5" value="2">
-            <button type="button" class="st-btn" data-k="gPrix" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_cfN"><span>Charges fixes en N</span><b id="lab_cfN">120 000&nbsp;€</b></label>
-        <div class="row">
-          <input type="range" id="in_cfN" min="0" max="1000000" step="10000" value="120000">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="cfN" data-d="-1">−</button>
-            <input type="number" id="num_cfN" class="numfield" min="0" max="1000000" step="10000" value="120000">
-            <button type="button" class="st-btn" data-k="cfN" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_inflCF"><span>Inflation charges fixes</span><b id="lab_inflCF">2 %</b></label>
-        <div class="row">
-          <input type="range" id="in_inflCF" min="0" max="10" step="0.5" value="2">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="inflCF" data-d="-1">−</button>
-            <input type="number" id="num_inflCF" class="numfield" min="0" max="10" step="0.5" value="2">
-            <button type="button" class="st-btn" data-k="inflCF" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_persoN"><span>Charges de personnel en N</span><b id="lab_persoN">60 000&nbsp;€</b></label>
-        <div class="row">
-          <input type="range" id="in_persoN" min="0" max="1000000" step="10000" value="60000">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="persoN" data-d="-1">−</button>
-            <input type="number" id="num_persoN" class="numfield" min="0" max="1000000" step="10000" value="60000">
-            <button type="button" class="st-btn" data-k="persoN" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_gPerso"><span>Croissance personnel</span><b id="lab_gPerso">3 %</b></label>
-        <div class="row">
-          <input type="range" id="in_gPerso" min="-5" max="15" step="0.5" value="3">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="gPerso" data-d="-1">−</button>
-            <input type="number" id="num_gPerso" class="numfield" min="-5" max="15" step="0.5" value="3">
-            <button type="button" class="st-btn" data-k="gPerso" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_tauxIS"><span>Taux d'imposition (IS)</span><b id="lab_tauxIS">25 %</b></label>
-        <div class="row">
-          <input type="range" id="in_tauxIS" min="0" max="40" step="1" value="25">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="tauxIS" data-d="-1">−</button>
-            <input type="number" id="num_tauxIS" class="numfield" min="0" max="40" step="1" value="25">
-            <button type="button" class="st-btn" data-k="tauxIS" data-d="1">+</button>
-          </div>
-        </div></div></div></details><details><summary>BFR — délais (avancé)</summary><div class="grp"><div class="ctrl">
-        <label for="in_DSO"><span>DSO — délai clients<span class="tip" title="Days Sales Outstanding : délai moyen de paiement des clients, en jours. Plus il est élevé, plus le cash est immobilisé dans les créances.">i</span></span><b id="lab_DSO">45 j</b></label>
-        <div class="row">
-          <input type="range" id="in_DSO" min="0" max="180" step="5" value="45">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="DSO" data-d="-1">−</button>
-            <input type="number" id="num_DSO" class="numfield" min="0" max="180" step="5" value="45">
-            <button type="button" class="st-btn" data-k="DSO" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_DPO"><span>DPO — délai fournisseurs<span class="tip" title="Days Payable Outstanding : délai moyen de paiement des fournisseurs. Plus il est élevé, mieux c&#39;est pour la trésorerie (on garde le cash plus longtemps).">i</span></span><b id="lab_DPO">60 j</b></label>
-        <div class="row">
-          <input type="range" id="in_DPO" min="0" max="180" step="5" value="60">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="DPO" data-d="-1">−</button>
-            <input type="number" id="num_DPO" class="numfield" min="0" max="180" step="5" value="60">
-            <button type="button" class="st-btn" data-k="DPO" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_DIO"><span>DIO — durée de stockage<span class="tip" title="Days Inventory Outstanding : durée moyenne de stockage, en jours. Plus il est élevé, plus le stock gèle du cash.">i</span></span><b id="lab_DIO">30 j</b></label>
-        <div class="row">
-          <input type="range" id="in_DIO" min="0" max="180" step="5" value="30">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="DIO" data-d="-1">−</button>
-            <input type="number" id="num_DIO" class="numfield" min="0" max="180" step="5" value="30">
-            <button type="button" class="st-btn" data-k="DIO" data-d="1">+</button>
-          </div>
-        </div></div></div></details><details><summary>Immobilisations (avancé)</summary><div class="grp"><div class="ctrl">
-        <label for="in_immoOuv0"><span>Immos nettes ouverture N</span><b id="lab_immoOuv0">800 000&nbsp;€</b></label>
-        <div class="row">
-          <input type="range" id="in_immoOuv0" min="0" max="3000000" step="50000" value="800000">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="immoOuv0" data-d="-1">−</button>
-            <input type="number" id="num_immoOuv0" class="numfield" min="0" max="3000000" step="50000" value="800000">
-            <button type="button" class="st-btn" data-k="immoOuv0" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_duree"><span>Durée d'amortissement</span><b id="lab_duree">8 ans</b></label>
-        <div class="row">
-          <input type="range" id="in_duree" min="1" max="25" step="1" value="8">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="duree" data-d="-1">−</button>
-            <input type="number" id="num_duree" class="numfield" min="1" max="25" step="1" value="8">
-            <button type="button" class="st-btn" data-k="duree" data-d="1">+</button>
-          </div>
-        </div></div></div></details><details><summary>Financement (avancé)</summary><div class="grp"><div class="ctrl">
-        <label for="in_detteOuv0"><span>Dette ouverture N</span><b id="lab_detteOuv0">500 000&nbsp;€</b></label>
-        <div class="row">
-          <input type="range" id="in_detteOuv0" min="0" max="3000000" step="50000" value="500000">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="detteOuv0" data-d="-1">−</button>
-            <input type="number" id="num_detteOuv0" class="numfield" min="0" max="3000000" step="50000" value="500000">
-            <button type="button" class="st-btn" data-k="detteOuv0" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_tauxInt"><span>Taux d'intérêt (dette initiale)</span><b id="lab_tauxInt">4 %</b></label>
-        <div class="row">
-          <input type="range" id="in_tauxInt" min="0" max="15" step="0.25" value="4">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="tauxInt" data-d="-1">−</button>
-            <input type="number" id="num_tauxInt" class="numfield" min="0" max="15" step="0.25" value="4">
-            <button type="button" class="st-btn" data-k="tauxInt" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_tauxIntNew"><span>Taux d'intérêt (nouveaux emprunts)</span><b id="lab_tauxIntNew">5,5 %</b></label>
-        <div class="row">
-          <input type="range" id="in_tauxIntNew" min="0" max="20" step="0.25" value="5.5">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="tauxIntNew" data-d="-1">−</button>
-            <input type="number" id="num_tauxIntNew" class="numfield" min="0" max="20" step="0.25" value="5.5">
-            <button type="button" class="st-btn" data-k="tauxIntNew" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_wacc"><span>Coût du capital (WACC)<span class="tip" title="Coût Moyen Pondéré du Capital : rendement minimum attendu par les financeurs (dette + fonds propres). L&#39;entreprise crée de la valeur seulement si son ROCE dépasse ce seuil.">i</span></span><b id="lab_wacc">8 %</b></label>
-        <div class="row">
-          <input type="range" id="in_wacc" min="0" max="25" step="0.5" value="8">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="wacc" data-d="-1">−</button>
-            <input type="number" id="num_wacc" class="numfield" min="0" max="25" step="0.5" value="8">
-            <button type="button" class="st-btn" data-k="wacc" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_tauxDiv"><span>Taux de dividende</span><b id="lab_tauxDiv">30 %</b></label>
-        <div class="row">
-          <input type="range" id="in_tauxDiv" min="0" max="100" step="5" value="30">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="tauxDiv" data-d="-1">−</button>
-            <input type="number" id="num_tauxDiv" class="numfield" min="0" max="100" step="5" value="30">
-            <button type="button" class="st-btn" data-k="tauxDiv" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_rnN1"><span>Résultat net N-1</span><b id="lab_rnN1">180 000&nbsp;€</b></label>
-        <div class="row">
-          <input type="range" id="in_rnN1" min="-200000" max="500000" step="10000" value="180000">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="rnN1" data-d="-1">−</button>
-            <input type="number" id="num_rnN1" class="numfield" min="-200000" max="500000" step="10000" value="180000">
-            <button type="button" class="st-btn" data-k="rnN1" data-d="1">+</button>
-          </div>
-        </div></div></div></details><details><summary>Bilan d'ouverture (avancé)</summary><div class="grp"><div class="ctrl">
-        <label for="in_openStocks"><span>Stocks ouverture</span><b id="lab_openStocks">40 000&nbsp;€</b></label>
-        <div class="row">
-          <input type="range" id="in_openStocks" min="0" max="500000" step="5000" value="40000">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="openStocks" data-d="-1">−</button>
-            <input type="number" id="num_openStocks" class="numfield" min="0" max="500000" step="5000" value="40000">
-            <button type="button" class="st-btn" data-k="openStocks" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_openCreances"><span>Créances clients ouverture</span><b id="lab_openCreances">60 000&nbsp;€</b></label>
-        <div class="row">
-          <input type="range" id="in_openCreances" min="0" max="500000" step="5000" value="60000">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="openCreances" data-d="-1">−</button>
-            <input type="number" id="num_openCreances" class="numfield" min="0" max="500000" step="5000" value="60000">
-            <button type="button" class="st-btn" data-k="openCreances" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_tresoOuv0"><span>Trésorerie ouverture</span><b id="lab_tresoOuv0">50 000&nbsp;€</b></label>
-        <div class="row">
-          <input type="range" id="in_tresoOuv0" min="-500000" max="1000000" step="5000" value="50000">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="tresoOuv0" data-d="-1">−</button>
-            <input type="number" id="num_tresoOuv0" class="numfield" min="-500000" max="1000000" step="5000" value="50000">
-            <button type="button" class="st-btn" data-k="tresoOuv0" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_openDettesF"><span>Dettes fournisseurs ouv.</span><b id="lab_openDettesF">45 000&nbsp;€</b></label>
-        <div class="row">
-          <input type="range" id="in_openDettesF" min="0" max="500000" step="5000" value="45000">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="openDettesF" data-d="-1">−</button>
-            <input type="number" id="num_openDettesF" class="numfield" min="0" max="500000" step="5000" value="45000">
-            <button type="button" class="st-btn" data-k="openDettesF" data-d="1">+</button>
-          </div>
-        </div></div><div class="ctrl">
-        <label for="in_cpOuv0"><span>Capitaux propres ouverture</span><b id="lab_cpOuv0">405 000&nbsp;€</b></label>
-        <div class="row">
-          <input type="range" id="in_cpOuv0" min="0" max="3000000" step="5000" value="405000">
-          <div class="stepper">
-            <button type="button" class="st-btn" data-k="cpOuv0" data-d="-1">−</button>
-            <input type="number" id="num_cpOuv0" class="numfield" min="0" max="3000000" step="5000" value="405000">
-            <button type="button" class="st-btn" data-k="cpOuv0" data-d="1">+</button>
-          </div>
-        </div></div></div></details></div>
+      <div class="aside-h">Scénarios</div>
+      <div id="scnList" class="scn-list"></div>
+      <div class="scn-actions">
+        <button type="button" class="scn-btn" id="btnSaveScn">Enregistrer</button>
+        <button type="button" class="scn-btn primary" id="btnCompare">Comparer</button>
+      </div>
+    </div>
+
     <div class="aside-sec" data-view="sim">
-    <div class="aside-h" style="margin-top:16px">Références produits</div>
-    <button class="fin-open" id="refOpen">Gérer les références (prix / volume / coût)…</button>
-    <div class="ref-summary" id="refSummaryPanel"></div>
-    </div><!-- /aside-sec Références -->
+      <div class="aside-h">Décisions à simuler</div>
+      <div id="decisions"></div>
+    </div>
+
+    <div class="aside-h">Hypothèses</div>
+    <div id="inputs"></div>
+
     <div class="aside-sec" data-view="sim">
-    <div class="aside-h" style="margin-top:16px">Financement</div>
-    <button class="fin-open" id="finOpen">Planifier emprunts &amp; remboursements…</button>
-    </div><!-- /aside-sec Financement -->
-    <button class="reset" id="reset" style="margin-top:12px">↺ Tout réinitialiser</button>
+      <div class="aside-h">Références produits</div>
+      <button type="button" class="fin-open" id="refOpen">Gérer les références (prix / volume / coût)</button>
+      <div class="ref-summary" id="refSummaryPanel"></div>
+    </div>
+
+    <div class="aside-sec" data-view="sim">
+      <div class="aside-h">Financement</div>
+      <button type="button" class="fin-open" id="finOpen">Planifier emprunts &amp; remboursements</button>
+    </div>
+
+    <button type="button" class="reset" id="reset">↺ Tout réinitialiser</button>
+    <div class="drawer-fade"></div>
   </aside>
 
-  <main>
-    <nav class="tabs">
-      <button class="tab on" data-view="sim">Simulation</button>
-      <button class="tab" data-view="dcf">Valorisation DCF</button>
-    </nav>
-    <div class="view" id="view-sim">
-    <div class="print-head" id="printHead"><div class="ph-co">Entreprise</div><div class="ph-sub">Business plan 5 ans · prévisions · édité le 15 juillet 2026</div></div>
-    <div class="simbar" id="simbar"><span class="dot"></span><span id="simtxt"></span></div>
-    <nav class="subtabs">
-      <button class="subtab on" data-sub="apercu">Vue d'ensemble</button>
-      <button class="subtab" data-sub="refs">Par référence</button>
-      <button class="subtab" data-sub="fin">Financement</button>
-    </nav>
-    <div class="subview" id="sub-apercu">
-    <div class="kpis" id="kpis"><div class="kpi"><div class="k-lab">CA (N+4)<span class="tip" title="Chiffre d&#39;affaires prévu en année N+4 (volume × prix).">i</span></div>
-      <div class="k-val">736 319&nbsp;€</div></div><div class="kpi"><div class="k-lab">Marge EBITDA (N+4)<span class="tip" title="EBITDA / CA. Profitabilité opérationnelle avant amortissements, intérêts et impôts.">i</span></div>
-      <div class="k-val">28,2 %</div></div><div class="kpi"><div class="k-lab">Résultat net (N+4)<span class="tip" title="Bénéfice final après charges financières et impôt.">i</span></div>
-      <div class="k-val">62 146&nbsp;€</div></div><div class="kpi"><div class="k-lab">Trésorerie — point bas<span class="tip" title="Le plus bas niveau de trésorerie sur les 5 ans. S&#39;il est négatif, il dimensionne le financement à sécuriser.">i</span></div>
-      <div class="k-val">-631 108&nbsp;€</div></div><div class="kpi"><div class="k-lab">Dette nette / EBITDA (N+4)<span class="tip" title="Nombre d&#39;années d&#39;EBITDA nécessaires pour rembourser la dette nette. Seuil d&#39;alerte bancaire ~3×.">i</span></div>
-      <div class="k-val">3,0×</div></div><div class="kpi"><div class="k-lab">BFR (jours de CA, N+4)<span class="tip" title="Besoin en Fonds de Roulement en jours de CA : le cash immobilisé par le cycle (créances + stocks − dettes fournisseurs).">i</span></div>
-      <div class="k-val">31 j</div></div><div class="kpi"><div class="k-lab">ROCE ap. impôt (N+4)<span class="tip" title="Return On Capital Employed : rentabilité des capitaux engagés, après impôt (NOPAT / (immos + BFR)). À comparer au WACC : ROCE &gt; WACC = création de valeur.">i</span></div>
-      <div class="k-val">6,2 %</div></div><div class="kpi"><div class="k-lab">Équilibre du bilan</div>
-    <div class="k-val"><span class="badge ok">✓ équilibré</span></div>
-    <div class="k-sub">Actif − Passif sur 5 ans</div></div></div>
-    <div class="conseil" id="conseil"></div>
-    <div class="charts">
-      <div class="card"><h3>Activité — CA &amp; EBITDA</h3><canvas id="cActivite"</canvas></div>
-      <div class="card"><h3>Trésorerie de clôture</h3><canvas id="cTreso"</canvas></div>
-      <div class="card"><h3>Résultat net</h3><canvas id="cRN"</canvas></div>
-      <div class="card"><h3>Dette nette / EBITDA (× ; seuil d'alerte 3×)</h3><canvas id="cLevier"</canvas></div>
-    </div>
-    <div class="tblwrap">
-      <table id="tbl"><tbody><tr><th>(en €)</th><th>N</th><th>N+1</th><th>N+2</th><th>N+3</th><th>N+4</th></tr><tr class=" tot"><td>Chiffre d'affaires</td><td class="">500 000&nbsp;€</td><td class="">550 800&nbsp;€</td><td class="">606 761&nbsp;€</td><td class="">668 408&nbsp;€</td><td class="">736 319&nbsp;€</td></tr><tr class=" "><td>Croissance du CA</td><td class="">—</td><td class="">10,2 %</td><td class="">10,2 %</td><td class="">10,2 %</td><td class="">10,2 %</td></tr><tr class=" "><td>Charges variables</td><td class="">-225 000&nbsp;€</td><td class="">-247 860&nbsp;€</td><td class="">-273 043&nbsp;€</td><td class="">-300 784&nbsp;€</td><td class="">-331 343&nbsp;€</td></tr><tr class=" "><td>Marge sur coûts variables</td><td class="">275 000&nbsp;€</td><td class="">302 940&nbsp;€</td><td class="">333 719&nbsp;€</td><td class="">367 625&nbsp;€</td><td class="">404 975&nbsp;€</td></tr><tr class=" "><td>Charges fixes</td><td class="">-120 000&nbsp;€</td><td class="">-122 400&nbsp;€</td><td class="">-124 848&nbsp;€</td><td class="">-127 345&nbsp;€</td><td class="">-129 892&nbsp;€</td></tr><tr class=" "><td>Charges de personnel</td><td class="">-60 000&nbsp;€</td><td class="">-61 800&nbsp;€</td><td class="">-63 654&nbsp;€</td><td class="">-65 564&nbsp;€</td><td class="">-67 531&nbsp;€</td></tr><tr class=" tot"><td>EBITDA</td><td class="pos">95 000&nbsp;€</td><td class="pos">118 740&nbsp;€</td><td class="pos">145 217&nbsp;€</td><td class="pos">174 716&nbsp;€</td><td class="pos">207 553&nbsp;€</td></tr><tr class=" "><td>Marge d'EBITDA</td><td class="">19,0 %</td><td class="">21,6 %</td><td class="">23,9 %</td><td class="">26,1 %</td><td class="">28,2 %</td></tr><tr class=" "><td>Dotation amortissements</td><td class="">-100 000&nbsp;€</td><td class="">-106 250&nbsp;€</td><td class="">-111 719&nbsp;€</td><td class="">-116 504&nbsp;€</td><td class="">-120 691&nbsp;€</td></tr><tr class=" tot"><td>EBIT</td><td class="neg">-5 000&nbsp;€</td><td class="pos">12 490&nbsp;€</td><td class="pos">33 498&nbsp;€</td><td class="pos">58 212&nbsp;€</td><td class="pos">86 862&nbsp;€</td></tr><tr class=" "><td>Charges financières</td><td class="">-20 000&nbsp;€</td><td class="">-16 000&nbsp;€</td><td class="">-12 000&nbsp;€</td><td class="">-8 000&nbsp;€</td><td class="">-4 000&nbsp;€</td></tr><tr class=" "><td>Résultat avant impôt</td><td class="neg">-25 000&nbsp;€</td><td class="neg">-3 510&nbsp;€</td><td class="pos">21 498&nbsp;€</td><td class="pos">50 212&nbsp;€</td><td class="pos">82 862&nbsp;€</td></tr><tr class=" "><td>Impôt sur les sociétés</td><td class="">-0&nbsp;€</td><td class="">-0&nbsp;€</td><td class="">-0&nbsp;€</td><td class="">-10 800&nbsp;€</td><td class="">-20 715&nbsp;€</td></tr><tr class=" tot"><td>RÉSULTAT NET</td><td class="neg">-25 000&nbsp;€</td><td class="neg">-3 510&nbsp;€</td><td class="pos">21 498&nbsp;€</td><td class="pos">39 412&nbsp;€</td><td class="pos">62 146&nbsp;€</td></tr><tr class="sec tot"><td>Trésorerie de clôture</td><td class="neg">-167 151&nbsp;€</td><td class="neg">-318 795&nbsp;€</td><td class="neg">-440 408&nbsp;€</td><td class="neg">-546 261&nbsp;€</td><td class="neg">-631 108&nbsp;€</td></tr><tr class=" "><td>BFR (jours de CA)</td><td class="">31 j</td><td class="">32 j</td><td class="">32 j</td><td class="">32 j</td><td class="">31 j</td></tr><tr class=" "><td>Dette nette</td><td class="">567 151&nbsp;€</td><td class="">618 795&nbsp;€</td><td class="">640 408&nbsp;€</td><td class="">646 261&nbsp;€</td><td class="">631 108&nbsp;€</td></tr><tr class=" "><td>Dette nette / EBITDA</td><td class="">6,0×</td><td class="">5,2×</td><td class="">4,4×</td><td class="">3,7×</td><td class="">3,0×</td></tr><tr class=" "><td>ROCE (après impôt)</td><td class="">-0,4 %</td><td class="">1,0 %</td><td class="">2,6 %</td><td class="">4,3 %</td><td class="">6,2 %</td></tr><tr class="sec "><td>Point mort (CA)</td><td class="">327 273&nbsp;€</td><td class="">334 909&nbsp;€</td><td class="">342 731&nbsp;€</td><td class="">350 743&nbsp;€</td><td class="">358 950&nbsp;€</td></tr><tr class=" "><td>Marge de sécurité</td><td class="">34,5 %</td><td class="">39,2 %</td><td class="">43,5 %</td><td class="">47,5 %</td><td class="">51,3 %</td></tr><tr class="sec tot"><td>Contrôle Actif − Passif</td><td class="">0&nbsp;€</td><td class="">0&nbsp;€</td><td class="">0&nbsp;€</td><td class="">0&nbsp;€</td><td class="">0&nbsp;€</td></tr></tbody></table>
-    </div>
-    </div><!-- /sub-apercu -->
-    <div class="subview" id="sub-refs" hidden>
-    <section class="fin-section">
-      <h2 class="fin-sec-h">Analyse par référence <span id="refAnSub"></span></h2>
-      <p class="fin-intro">Décomposition du chiffre d'affaires et de la marge par référence produit, sur tout l'horizon. Le <b>mix</b> montre comment le poids de chaque référence dans le CA évolue. Reflète les décisions actives (volume). Édite les références via <b>« Gérer les références »</b> (panneau de gauche).</p>
-      <div class="kpis" id="refKpis"></div>
-      <div class="charts">
-        <div class="card"><h3>CA par référence</h3><canvas id="cRefCA"></canvas></div>
-        <div class="card"><h3>Mix — poids dans le CA (%)</h3><canvas id="cRefMix"></canvas></div>
-        <div class="card"><h3>Marge sur coûts variables par référence</h3><canvas id="cRefMarge"></canvas></div>
-        <div class="card"><h3>Taux de marge par référence (%)</h3><canvas id="cRefTx"></canvas></div>
-      </div>
-      <div class="tblwrap"><table id="refTbl"></table></div>
-    </section>
-    </div><!-- /sub-refs -->
-    <div class="subview" id="sub-fin" hidden>
-    <section class="fin-section" id="finSection">
-      <h2 class="fin-sec-h">Financement — portefeuille d'emprunts <span id="finSecSub"></span></h2>
-      <p class="fin-intro">Analyse des emprunts configurés via <b>« Planifier emprunts &amp; remboursements »</b> (panneau de gauche). Chaque emprunt est en <b>annuités constantes</b> : l'annuité totale reste fixe, mais la part d'intérêts <b>baisse</b> et la part de capital remboursé <b>monte</b> au fil des années — jusqu'à un capital restant dû nul.</p>
-      <div class="charts fin-charts">
-        <div class="card"><h3>Capital restant dû</h3><canvas id="cResteDu"></canvas></div>
-        <div class="card"><h3>Intérêts payés / an</h3><canvas id="cInterets"></canvas></div>
-        <div class="card"><h3>Remboursement du capital / an</h3><canvas id="cCapital"></canvas></div>
-      </div>
-      <div class="tblwrap"><table id="finTbl"></table></div>
-    </section>
-    </div><!-- /sub-fin -->
-    </div><!-- /view-sim -->
-
-    <div class="view" id="view-dcf" hidden>
-      <div class="dcf-intro">
-        <h2 class="fin-sec-h">Valorisation par les flux de trésorerie actualisés (DCF)</h2>
-        <p class="dcf-sub">Valeur de l'entreprise = somme des <b>flux de trésorerie disponibles (FCFF)</b> actualisés au coût du capital (WACC), + une <b>valeur terminale</b>.
-          Règle WACC/g et le multiple de sortie dans les hypothèses (groupe « Valorisation DCF » à gauche).</p>
-      </div>
-      <div class="kpis" id="dcfKpis"></div>
-      <div class="charts">
-        <div class="card"><h3>Flux actualisés (PV) par année + valeur terminale</h3><canvas id="cDcfPV"></canvas></div>
-        <div class="card"><h3>Pont de valeur : EV → valeur des capitaux propres</h3><canvas id="cDcfBridge"></canvas></div>
-      </div>
-      <div class="tblwrap"><table id="dcfTbl"></table></div>
-      <h3 class="dcf-sens-h">Sensibilité de la valeur d'entreprise (EV) — WACC × croissance perpétuelle</h3>
-      <div class="tblwrap"><table id="dcfSens" class="cmp-table"></table></div>
-    </div><!-- /view-dcf -->
-  </main>
+  <!-- languette de réouverture, visible quand le tiroir est fermé -->
+  <button type="button" class="drawer-tab" id="btnDrawerTab">⟨ HYPOTHÈSES</button>
 </div>
+
 <div class="print-foot" id="printFoot"></div>
 
 <script src="app.js"></script>
-
-</body></html>
+</body>
+</html>
