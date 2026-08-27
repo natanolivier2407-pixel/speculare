@@ -21,6 +21,7 @@
     <button type="button" class="nav" data-go="refs"><i>◫</i><em>Par référence</em></button>
     <button type="button" class="nav" data-go="fin"><i>≡</i><em>Financement</em></button>
     <button type="button" class="nav" data-go="dcf"><i>◈</i><em>Valorisation DCF</em></button>
+    <button type="button" class="nav" data-go="pack"><i>▥</i><em>Pack financier</em></button>
 
     <div class="rail-sec">Scénarios</div>
     <button type="button" class="nav" id="railCompare"><i>⇄</i><em>Comparer</em></button>
@@ -91,9 +92,10 @@
           <div class="conseil" id="conseil"></div>
         </div>
 
-        <div class="card-h tbl-h"><h3>Pack financier</h3>
-          <span class="sub">compte de résultat · flux · bilan · indicateurs</span></div>
-        <div class="tblwrap"><table id="tbl"></table></div>
+        <div class="card-h tbl-h"><h3>Compte de résultat condensé</h3>
+          <span class="sub">le détail complet est dans le pack financier</span>
+          <button type="button" class="card-go" data-go="pack">Ouvrir le pack financier →</button></div>
+        <div class="tblwrap tbl-short"><table id="tblMini"></table></div>
       </div><!-- /sub-apercu -->
 
       <!-- ····· Par référence ····· -->
@@ -156,6 +158,20 @@
       <h3 class="dcf-sens-h">Sensibilité de la valeur d'entreprise — WACC × croissance perpétuelle</h3>
       <div class="tblwrap"><table id="dcfSens" class="cmp-table"></table></div>
     </div><!-- /view-dcf -->
+
+    <!-- ---------- Vue Pack financier ---------- -->
+    <div class="view" id="view-pack" hidden>
+      <button type="button" class="crumb" data-go="apercu">← Retour à la vue d'ensemble</button>
+      <div class="view-h">
+        <h2>Pack financier</h2><span class="h-sub" id="packSub"></span>
+        <div class="h-act">
+          <button type="button" class="hbtn" id="btnPackAll">Tout replier</button>
+          <button type="button" class="hbtn drawer-toggle">Hypothèses ⟩</button>
+        </div>
+      </div>
+      <div class="jump" id="packJump"></div>
+      <div class="tblwrap tbl-full"><table id="tbl"></table></div>
+    </div><!-- /view-pack -->
 
     </div><!-- /page -->
 

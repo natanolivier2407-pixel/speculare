@@ -144,10 +144,12 @@
   .ctrl label{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-2);margin-bottom:3px}
   .ctrl label b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
   .ctrl .row{display:flex;align-items:center;gap:8px;min-width:0}
-  /* le curseur absorbe la place restante ; sans min-width:0 il refuse de rétrécir et
-     comprime le stepper, dont l'overflow:hidden coupe alors le bouton + */
-  .ctrl input[type=range]{flex:1 1 0;min-width:0;accent-color:var(--blue)}
-  /* steppers − / + (sélection de nombres facile) */
+  /* plus de curseur : le stepper occupe toute la largeur disponible.
+     min-width:0 reste indispensable, sinon il refuse de rétrécir et son overflow:hidden
+     coupe le bouton + quand le libellé est long. */
+  .ctrl .stepper{flex:1 1 0;min-width:0}
+  .ctrl .stepper .numfield{flex:1 1 0;min-width:0;width:auto;text-align:right;padding-right:8px}
+  /* steppers − / + (saisie au clavier, ajustement au bouton) */
   .stepper{display:flex;align-items:center;flex:none;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:var(--surface)}
   .st-btn{width:26px;height:26px;border:none;background:var(--surface-2);color:var(--ink-2);font-size:16px;
     line-height:1;cursor:pointer;font-weight:700;flex:none}
@@ -164,7 +166,7 @@
     cursor:pointer;font-size:11px;font-weight:600;line-height:1;padding:0 9px;color:var(--ink-2);white-space:nowrap}
   .yr-btn:hover{border-color:var(--blue)}
   .yr-btn.on{background:var(--blue-soft);border-color:var(--blue)}
-  .ctrl.ov-on input[type=range],.ctrl.ov-on .stepper{opacity:.35;pointer-events:none}
+  .ctrl.ov-on .stepper{opacity:.35;pointer-events:none}
   .ctrl.ov-on label b{color:var(--blue)}
   /* mode croissance : la valeur en N reste la base des taux, donc pleinement modifiable */
   .ctrl.ov-rate label b{color:var(--blue)}
@@ -213,7 +215,6 @@
   .om-field .om-hint{color:var(--muted);font-weight:400}
   .om-field input[type=number].numfield{width:100%;border:1px solid var(--border);border-radius:7px;padding:6px 8px;
     background:var(--surface);text-align:left}
-  .om-field input[type=range]{width:100%}
   .om-intro{font-size:11.5px;color:var(--ink-2);line-height:1.5;margin:-2px 0 9px}
   .om-explain{font-size:11.5px;color:var(--ink-2);line-height:1.5;margin:9px 0 10px}
   .om-explain i{color:var(--ink);font-style:italic}
@@ -483,6 +484,22 @@
   table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px;font-variant-numeric:tabular-nums}
   .tblwrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;
     padding:0;overflow:auto;max-height:min(560px,calc(100vh - 170px));box-shadow:var(--shadow)}
+  /* Onglet Pack financier : le tableau est SEUL sur la page, sa boîte occupe donc toute la
+     hauteur utile. Le défilement imbriqué devient le défilement de la page — plus de
+     double molette, et l'en-tête colle en haut de l'écran. */
+  .tbl-full{max-height:calc(100vh - 152px)}
+  .tbl-short{max-height:none}   /* le CR condensé fait 6 lignes : aucune boîte à défiler */
+  /* pastilles de saut */
+  .jump{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+  .chip{padding:6px 13px;border:1px solid var(--border);border-radius:20px;background:var(--surface);
+    color:var(--ink-2);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer}
+  .chip:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-soft)}
+  /* sections repliables */
+  tr.grouprow{cursor:pointer}
+  tr.grouprow td::before{content:"▾ ";opacity:.75}
+  tr.grouprow.closed td::before{content:"▸ "}
+  tr.grouprow:hover td,tr.grouprow:hover td:first-child{background:#123a5f}
+  tr.row-off{display:none}
   th,td{padding:7px 11px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border)}
   /* en-tête collant : sur 46 lignes, on perd sinon les années au premier défilement */
   th{position:sticky;top:0;z-index:3;background:var(--surface);color:var(--muted);
@@ -497,13 +514,12 @@
   /* Les lignes de total doivent être plus SOMBRES que le fond de page (--plane #f2f3f0),
      sinon elles s'y confondent et le tableau paraît troué. --surface-2 était trop clair. */
   tr.tot td,tr.tot td:first-child{font-weight:700;color:var(--ink);background:#e7e5dc}
-  /* dernière année mise en avant */
-  th.cur,td.cur{background:var(--blue-soft)}
-  tr.tot td.cur{background:#d5e3f5}
-  /* surlignage de la ligne survolée */
+  /* Réticule de lecture : la ligne ET la colonne survolées s'éclairent, leur croisement
+     plus fort. Rien n'est figé sur une année en particulier. */
   tbody tr:not(.grouprow):hover td,
   tbody tr:not(.grouprow):hover td:first-child{background:#eef4fb}
-  tbody tr:not(.grouprow):hover td.cur{background:#dde9f7}
+  td.colhl,th.colhl{background:#eef4fb}
+  tbody tr:not(.grouprow):hover td.colhl{background:#d7e6f8}
   .pos{color:var(--good-text)} .neg{color:var(--critical)}
 
   /* ================= BANDEAU DE SYNTHÈSE, COLLÉ EN BAS ================= */
@@ -576,7 +592,7 @@
     .st-btn{width:40px;height:40px;font-size:18px}
     .stepper .numfield{min-height:40px;font-size:15px;width:66px}
     .yr-btn{height:40px;font-size:12px;padding:0 12px}
-    .ctrl input[type=range]{height:34px}
+    .ctrl .stepper .numfield{min-height:40px}
     .loan-modebtn{padding:9px 14px}
     .om-field input[type=number].numfield{min-height:42px}
     .dec-chk{width:20px;height:20px}
@@ -609,8 +625,16 @@
     #kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
     .charts{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
     .charts canvas{width:100%!important;height:auto!important;max-width:100%}
+    /* 🔴 Le pack financier vit désormais dans son propre onglet. Sans cette règle, un export
+       lancé depuis la vue d'ensemble sortirait SANS les états financiers. Le document imprimé
+       contient donc toujours la vue d'ensemble ET le pack, quel que soit l'onglet à l'écran. */
+    #view-sim,#sub-apercu,#view-pack{display:block!important}
+    #view-dcf,#sub-refs,#sub-fin{display:none!important}
+    #view-pack .crumb,#view-pack .jump{display:none!important}
+    tr.row-off{display:table-row!important}   /* on imprime tout, même les sections repliées */
+    tr.grouprow td::before{content:""}
     /* 🔴 le collant doit redevenir statique : sinon l'en-tête se répète en travers des pages */
-    .tblwrap{overflow:visible;max-height:none}
+    .tblwrap,.tbl-full,.tbl-short{overflow:visible;max-height:none}
     th,td:first-child,th:first-child{position:static!important}
     .view-h h2{break-after:avoid;font-size:15px;margin-bottom:12px}
     /* En-tête de document */

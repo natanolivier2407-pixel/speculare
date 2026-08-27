@@ -882,7 +882,6 @@ function buildInputs(){
     d.innerHTML=`<summary>${g.titre}</summary>`;
     const wrap=document.createElement('div'); wrap.className='grp';
     g.items.forEach(it=>{
-      const id='in_'+it.key;
       if(it.derived){   // poste calculé (ex. trésorerie d'ouverture = plug d'équilibre) : lecture seule
         const row=document.createElement('div'); row.className='ctrl ctrl-derived'; row.dataset.key=it.key;
         row.innerHTML=`<label><span>${it.lab}${it.tip?tipHTML(it.tip):''}</span><b id="lab_${it.key}"></b></label>`;
@@ -890,10 +889,11 @@ function buildInputs(){
       }
       const per = PERYEAR_KEYS.indexOf(it.key)>=0;
       const row=document.createElement('div'); row.className='ctrl'; row.dataset.key=it.key;
+      // Plus de curseur : la saisie se fait au clavier ou aux boutons − / +. Un curseur
+      // ne permet pas de poser une valeur précise, et c'est toujours ce qu'on veut ici.
       row.innerHTML=`
-        <label for="${id}"><span>${it.lab}${it.tip?tipHTML(it.tip):''}</span><b id="lab_${it.key}"></b></label>
+        <label for="num_${it.key}"><span>${it.lab}${it.tip?tipHTML(it.tip):''}</span><b id="lab_${it.key}"></b></label>
         <div class="row">
-          <input type="range" id="${id}" min="${it.min}" max="${it.max}" step="${it.step}" value="${it.v}">
           <div class="stepper">
             <button type="button" class="st-btn" data-k="${it.key}" data-d="-1">−</button>
             <input type="number" id="num_${it.key}" class="numfield" min="${it.min}" max="${it.max}" step="${it.step}" value="${it.v}">
@@ -908,11 +908,8 @@ function buildInputs(){
   });
   GROUPS.flatMap(g=>g.items).forEach(it=>{
     if(it.derived) return;
-    const rng=document.getElementById('in_'+it.key);
     const num=document.getElementById('num_'+it.key);
-    const sync=(src,dst)=>{dst.value=src.value; paramChanged(it.key);};
-    rng.addEventListener('input',()=>sync(rng,num));
-    num.addEventListener('input',()=>sync(num,rng));
+    num.addEventListener('input',()=>paramChanged(it.key));
   });
   root.querySelectorAll('.yr-btn').forEach(b=>b.addEventListener('click',()=>openYearModal(b.dataset.k)));
   root.querySelectorAll('.st-btn').forEach(b=>{
@@ -942,7 +939,7 @@ function buildOpeningMode(){
       <div class="om-field"><label>Trésorerie d'ouverture cible</label>
         <input type="number" id="fund_targetCash" class="numfield" step="5000" value="${fund.targetCash}"></div>
       <div class="om-field"><label>Part financée par dette&nbsp;: <b id="fund_partLab">${fund.partDette}&nbsp;%</b> <span class="om-hint">(reste en apport de capital)</span></label>
-        <input type="range" id="fund_partDette" min="0" max="100" step="5" value="${fund.partDette}"></div>
+        <input type="number" id="fund_partDette" class="numfield" min="0" max="100" step="5" value="${fund.partDette}"></div>
       <div class="om-field"><label>Taux de l'emprunt d'amorçage (%)</label>
         <input type="number" id="fund_tauxAmor" class="numfield" step="0.25" value="${fund.tauxAmor}"></div>
       <div class="om-field"><label>Durée de l'emprunt d'amorçage (ans)</label>
@@ -1002,7 +999,7 @@ function stepVal(it,dir){
   let v=(parseFloat(num.value)||0)+dir*it.step;
   v=Math.max(it.min, Math.min(it.max, v));
   v=parseFloat(v.toFixed(6));
-  num.value=v; document.getElementById('in_'+it.key).value=v; paramChanged(it.key);
+  num.value=v; paramChanged(it.key);
 }
 // un changement de paramètre : si c'est l'horizon, on reconstruit les années avant de recalculer
 function paramChanged(key){ if(key==='nbAnnees') applyHorizon(); else refresh(); }
@@ -1047,8 +1044,8 @@ function readH(){
   return H;
 }
 function setVal(key,val){
-  const r=document.getElementById('in_'+key), n=document.getElementById('num_'+key);
-  if(r){r.value=val;} if(n){n.value=val;}
+  const n=document.getElementById('num_'+key);
+  if(n){n.value=val;}
 }
 
 // ============================================================
@@ -1568,7 +1565,7 @@ function refresh(){
 
   updateFundReadout(R);
   renderKPIs(R,H); renderStructure(R,H); renderStickybar(R); renderConseiller(R,H);
-  renderTable(R); renderFinance(R); renderRefsAnalysis(R); renderDCF(R,H);   // parties DOM (sûres même onglet masqué)
+  renderTable(R); renderMiniTable(R); renderFinance(R); renderRefsAnalysis(R); renderDCF(R,H);   // parties DOM (sûres même onglet masqué)
   renderActiveCharts();                                     // graphes du seul onglet visible
   saveState(); updatePrintHead();
 }
@@ -1584,8 +1581,10 @@ function renderActiveCharts(){
 function switchView(name){
   currentView=name;
   document.querySelectorAll('.view').forEach(v=>{ v.hidden = (v.id!=='view-'+name); });
-  // le tiroir est contextuel : sections et groupes d'hypothèses filtrés par vue
-  const show=v=>(v===name||v==='both');
+  // le tiroir est contextuel : sections et groupes d'hypothèses filtrés par vue.
+  // Le pack financier dépend des mêmes hypothèses que la simulation.
+  const key = (name==='pack') ? 'sim' : name;
+  const show=v=>(v===key||v==='both');
   document.querySelectorAll('.aside-sec').forEach(s=>{ s.hidden = !show(s.dataset.view||'sim'); });
   document.querySelectorAll('#inputs details').forEach(d=>{ d.hidden = !show(d.dataset.view||'sim'); });
   renderActiveCharts();
@@ -1598,10 +1597,11 @@ function switchSub(name){
 
 // ---- Navigation par le rail : chaque entrée = un couple (vue, sous-vue) ----
 const NAV = {
-  apercu:{view:'sim', sub:'apercu'},
-  refs:  {view:'sim', sub:'refs'},
-  fin:   {view:'sim', sub:'fin'},
-  dcf:   {view:'dcf', sub:null},
+  apercu:{view:'sim',  sub:'apercu'},
+  refs:  {view:'sim',  sub:'refs'},
+  fin:   {view:'sim',  sub:'fin'},
+  dcf:   {view:'dcf',  sub:null},
+  pack:  {view:'pack', sub:null},
 };
 function navigate(name){
   const d=NAV[name]; if(!d) return;
@@ -1903,23 +1903,36 @@ function renderConseiller(R,H){
   document.getElementById('conseil').innerHTML=html;
 }
 
+// Les 5 blocs du pack. `id` sert au repli et aux pastilles de saut, `court` à ces dernières.
+const PACK_SECTIONS = [
+  {id:'cr',     lab:'COMPTE DE RÉSULTAT',            court:'Compte de résultat'},
+  {id:'flux',   lab:'TABLEAU DE FLUX DE TRÉSORERIE', court:'Flux de trésorerie'},
+  {id:'actif',  lab:'BILAN — ACTIF',                 court:'Bilan actif'},
+  {id:'passif', lab:'BILAN — PASSIF',                court:'Bilan passif'},
+  {id:'indic',  lab:'INDICATEURS',                   court:'Indicateurs'},
+];
+
 function renderTable(R){
-  // la dernière année reçoit la classe `cur` : c'est celle que lisent les KPI
-  const last=NY-1;
-  const head=`<tr><th>(en €)</th>${ANNEES.map((a,i)=>`<th class="${i===last?'cur':''}">${a}</th>`).join('')}</tr>`;
+  const head=`<tr><th>(en €)</th>${ANNEES.map(a=>`<th>${a}</th>`).join('')}</tr>`;
+  let curSec='';   // section courante : chaque ligne la porte, pour pouvoir la replier
   const line=(lab,arr,fmt=fEUR,color=false,sec=false,tot=false)=>{
-    const tds=arr.map((v,i)=>{
-      const c = [color? cls(v):'', i===last?'cur':''].filter(Boolean).join(' ');
+    const tds=arr.map(v=>{
+      const c = color? cls(v):'';
       return `<td class="${c}">${fmt(v)}</td>`;
     }).join('');
-    return `<tr class="${sec?'sec':''} ${tot?'tot':''}"><td>${lab}</td>${tds}</tr>`;
+    return `<tr class="${sec?'sec':''} ${tot?'tot':''}" data-sec="${curSec}"><td>${lab}</td>${tds}</tr>`;
   };
-  // bandeau de section : une ligne pleine largeur qui coupe le tableau en états financiers
-  const sect=(lab)=>`<tr class="grouprow"><td colspan="${NY+1}">${lab}</td></tr>`;
+  // bandeau de section : cliquable, il replie les lignes qui le suivent
+  const sect=(id)=>{
+    curSec=id;
+    const s=PACK_SECTIONS.find(x=>x.id===id);
+    return `<tr class="grouprow" data-sec="${id}" title="Replier ou déplier cette section">`
+         + `<td colspan="${NY+1}">${s?s.lab:id}</td></tr>`;
+  };
   const cession = R.resExcept.some(x=>Math.abs(x)>0.5);
   let h=head;
 
-  h+=sect("COMPTE DE RÉSULTAT");
+  h+=sect("cr");
   h+=line("Chiffre d'affaires",R.CA,fEUR,false,false,true);
   h+=line("Croissance du CA",R.croiss,fPCT);
   h+=line("Charges variables",R.chgv.map(x=>-x));
@@ -1938,7 +1951,7 @@ function renderTable(R){
 
   // Méthode indirecte : on repart du résultat net, on annule les charges non décaissées
   // (dotations) et on corrige de la variation du besoin en fonds de roulement.
-  h+=sect("TABLEAU DE FLUX DE TRÉSORERIE");
+  h+=sect("flux");
   h+=line("Résultat net",R.RN,fEUR,true);
   h+=line("+ Dotation aux amortissements",R.dot);
   h+=line("− Variation du BFR",R.varBFR.map(x=>-x),fEUR,true);
@@ -1953,21 +1966,21 @@ function renderTable(R){
   h+=line("Trésorerie d'ouverture",R.tresoOuv,fEUR,true);
   h+=line("Trésorerie de clôture",R.tresoClot,fEUR,true,false,true);
 
-  h+=sect("BILAN — ACTIF");
+  h+=sect("actif");
   h+=line("Immobilisations nettes",R.immoClot);
   h+=line("Stocks",R.stocks);
   h+=line("Créances clients",R.creances);
   h+=line("Trésorerie",R.tresoClot,fEUR,true);
   h+=line("TOTAL ACTIF",R.actif,fEUR,false,false,true);
 
-  h+=sect("BILAN — PASSIF");
+  h+=sect("passif");
   h+=line("Capitaux propres",R.cpClot,fEUR,true);
   h+=line("Dettes financières",R.detteClot);
   h+=line("Dettes fournisseurs",R.df);
   h+=line("TOTAL PASSIF",R.passif,fEUR,false,false,true);
   h+=line("Contrôle Actif − Passif",R.ctrl,fEUR,false,false,true);
 
-  h+=sect("INDICATEURS");
+  h+=sect("indic");
   h+=line("BFR (jours de CA)",R.bfrJours,fJ);
   h+=line("Dette nette",R.detteNette);
   h+=line("Dette nette / EBITDA",R.levier,fX,false);
@@ -1975,6 +1988,64 @@ function renderTable(R){
   h+=line("Point mort (CA)",R.pointMort,fEUR,false);
   h+=line("Marge de sécurité",R.margeSecu,fPCT);
   document.getElementById('tbl').innerHTML=h;
+  applySections();   // restitue les sections repliées, que le rendu vient d'effacer
+  const ps=document.getElementById('packSub');
+  if(ps) ps.textContent = `${ANNEES[0]} → ${ANNEES[NY-1]} · ${PACK_SECTIONS.length} sections`;
+}
+
+// ---- Vue d'ensemble : le compte de résultat en 6 lignes ----
+// Le détail vit dans l'onglet « Pack financier ». Ici on garde la substance : du CA
+// au résultat net, plus la trésorerie, sans les 46 lignes.
+function renderMiniTable(R){
+  const el=document.getElementById('tblMini'); if(!el) return;
+  const line=(lab,arr,fmt=fEUR,color=false,tot=false)=>
+    `<tr class="${tot?'tot':''}"><td>${lab}</td>`
+    + arr.map(v=>`<td class="${color?cls(v):''}">${fmt(v)}</td>`).join('') + `</tr>`;
+  el.innerHTML =
+      `<tr><th>(en €)</th>${ANNEES.map(a=>`<th>${a}</th>`).join('')}</tr>`
+    + line("Chiffre d'affaires",R.CA,fEUR,false,true)
+    + line("Marge sur coûts variables",R.marge)
+    + line("EBITDA",R.EBITDA,fEUR,true,true)
+    + line("EBIT",R.EBIT,fEUR,true)
+    + line("RÉSULTAT NET",R.RN,fEUR,true,true)
+    + line("Trésorerie de clôture",R.tresoClot,fEUR,true,true);
+}
+
+// ---- Repli des sections + pastilles de saut (onglet Pack financier) ----
+// `packClosed` survit au rendu : renderTable réécrit le tableau à CHAQUE frappe, une
+// section repliée se rouvrirait sinon aussitôt.
+let packClosed={};
+function setSection(id,closed){
+  packClosed[id]=closed;
+  const tbl=document.getElementById('tbl'); if(!tbl) return;
+  const band=tbl.querySelector('tr.grouprow[data-sec="'+id+'"]');
+  if(band) band.classList.toggle('closed',closed);
+  tbl.querySelectorAll('tr[data-sec="'+id+'"]:not(.grouprow)')
+     .forEach(tr=>tr.classList.toggle('row-off',closed));
+}
+function applySections(){ PACK_SECTIONS.forEach(s=>setSection(s.id, !!packClosed[s.id])); }
+function sectionClosed(id){ return !!packClosed[id]; }
+function buildPackNav(){
+  const wrap=document.getElementById('packJump'); if(!wrap) return;
+  wrap.innerHTML = PACK_SECTIONS.map(s=>
+    `<button type="button" class="chip" data-jump="${s.id}">${s.court}</button>`).join('');
+  wrap.addEventListener('click',e=>{
+    const b=e.target.closest('[data-jump]'); if(!b) return;
+    const id=b.dataset.jump;
+    if(sectionClosed(id)) setSection(id,false);            // une section repliée se rouvre avant le saut
+    const band=document.querySelector('#tbl tr.grouprow[data-sec="'+id+'"]');
+    if(band) band.scrollIntoView({block:'start',behavior:'smooth'});
+  });
+  // clic sur un bandeau = repli de sa section
+  document.getElementById('tbl').addEventListener('click',e=>{
+    const band=e.target.closest('tr.grouprow'); if(!band) return;
+    setSection(band.dataset.sec, !band.classList.contains('closed'));
+  });
+  document.getElementById('btnPackAll').addEventListener('click',function(){
+    const fermer = this.textContent.indexOf('replier')>=0;
+    PACK_SECTIONS.forEach(s=>setSection(s.id,fermer));
+    this.textContent = fermer ? 'Tout déplier' : 'Tout replier';
+  });
 }
 
 function mkChart(id,cfg){ if(charts[id])charts[id].destroy(); charts[id]=new Chart(document.getElementById(id),cfg); }
@@ -2484,6 +2555,28 @@ document.addEventListener('click',e=>{
   e.preventDefault();
   navigate(go.dataset.go);
 });
+// ---- Réticule de lecture des tableaux : surligne la colonne survolée ----
+// Écouteur délégué sur document : les tableaux sont réécrits en innerHTML à chaque
+// recalcul, un écouteur posé sur eux ne survivrait pas.
+let hlTable=null, hlCol=-1;
+function clearColHL(){
+  if(hlTable) hlTable.querySelectorAll('.colhl').forEach(c=>c.classList.remove('colhl'));
+  hlTable=null; hlCol=-1;
+}
+document.addEventListener('mouseover',e=>{
+  const cell = e.target.closest && e.target.closest('.tblwrap td, .tblwrap th');
+  if(!cell){ if(hlTable) clearColHL(); return; }
+  const tbl=cell.closest('table'), i=cell.cellIndex;
+  if(tbl===hlTable && i===hlCol) return;          // même colonne : rien à refaire
+  clearColHL();
+  if(i<=0) return;                                // la colonne des libellés ne s'éclaire pas
+  hlTable=tbl; hlCol=i;
+  tbl.querySelectorAll('tr').forEach(tr=>{
+    if(tr.classList.contains('grouprow')) return; // bandeau de section : une seule cellule
+    const c=tr.children[i]; if(c) c.classList.add('colhl');
+  });
+});
+
 // La flèche pointe TOUJOURS vers l'action à venir : ⟨ pour replier, ⟩ pour déplier.
 function syncRail(){
   const min=appEl.classList.contains('rail-min');
@@ -2515,6 +2608,7 @@ buildFinanceModal();
 buildRefModal();
 buildCapModal();
 buildPinModal();
+buildPackNav();
 buildYearModal();   // en dernier : son overlay doit se superposer aux autres modales
 loadState();      // restaure les saisies précédentes si présentes
 renderScenarioList();
