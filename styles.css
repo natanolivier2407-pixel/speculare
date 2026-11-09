@@ -13,7 +13,7 @@
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--plane);color:var(--ink)}
-  .print-head,.print-foot{display:none}
+  .print-head,.print-foot,.print-only{display:none}
   /* Ascenseurs escamotés : le défilement fonctionne, la barre ne s'affiche plus. */
   main,aside,.tblwrap,.rail{scrollbar-width:none;-ms-overflow-style:none}
   main::-webkit-scrollbar,aside::-webkit-scrollbar,
@@ -637,12 +637,39 @@
     .tblwrap,.tbl-full,.tbl-short{overflow:visible;max-height:none}
     th,td:first-child,th:first-child{position:static!important}
     .view-h h2{break-after:avoid;font-size:15px;margin-bottom:12px}
+    /* ---- Le PDF est un document CHIFFRÉ : ni KPI, ni commentaire, ni couleur sur les montants.
+       La conclusion appartient à celui qui présente (PPT, rapport Word), pas à ce document. ---- */
+    .screen-only{display:none!important}
+    .print-only{display:block!important}
+    .pos,.neg{color:inherit!important}
+    /* Page 1 : 2 graphes côte à côte, puis les hypothèses chiffrées */
+    .charts{margin-bottom:14px}
+    #printHyp .tblwrap{margin-bottom:14px}
+    .hyp-tbl th,.hyp-tbl td{padding-top:5px;padding-bottom:5px}
+    .hyp-tbl td.hyp-ind{padding-left:24px}
+    /* Beaucoup de références : le tableau continue page suivante (années répétées en tête)
+       plutôt que de partir en bloc et de laisser la page 1 avec les seuls graphes. */
+    .hyp-wrap{break-inside:auto}
+    /* Page 2 : le financement (emprunts, bilan d'ouverture, décisions) — une page = un sujet */
+    .hyp-p2{break-before:page}
+    .hyp-bil th:nth-child(3){color:var(--ink)}
+    tr.hyp-ref td{font-weight:700;background:var(--surface-2)}
+    /* colonnes de texte alignées à gauche (par défaut, seule la 1re l'est) */
+    .hyp-bil td:nth-child(3),.hyp-bil th:nth-child(3),.hyp-dec td:nth-child(2),.hyp-dec th:nth-child(2){text-align:left}
+    .hyp-bil td:nth-child(3),.hyp-bil th:nth-child(3){border-left:1px solid var(--border)}
+    /* Pas de cadre autour des tableaux : coupé par un saut de page, le cadre descendrait
+       jusqu'en bas de la feuille. Les filets de ligne et les bandeaux suffisent. */
+    .tblwrap{border:none!important;border-radius:0}
+    /* Chaque état financier commence sur sa page ; la ligne des années (thead) se répète en tête */
+    #view-pack{break-before:page}
+    #tbl tr.grouprow[data-sec="flux"],#tbl tr.grouprow[data-sec="actif"]{break-before:page}
+    thead{display:table-header-group}
     /* En-tête de document */
     .print-head{display:block;margin-bottom:18px;padding-bottom:12px;border-bottom:2.5px solid var(--ink)}
     .print-head .ph-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
     .print-head .ph-issuer{font-size:13px;font-weight:700;letter-spacing:.3px;color:var(--ink)}
     .print-head .ph-conf{font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
-      color:var(--critical);border:1px solid var(--critical);border-radius:4px;padding:2px 8px}
+      color:var(--ink);border:1px solid var(--ink);border-radius:4px;padding:2px 8px}
     .print-head .ph-co{font-size:27px;font-weight:700;letter-spacing:-.4px;line-height:1.1;color:var(--ink)}
     .print-head .ph-sub{font-size:11.5px;color:var(--ink-2);margin-top:5px}
     /* Pied de page répété sur chaque feuille */

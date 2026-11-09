@@ -45,7 +45,7 @@
 
       <!-- ····· Vue d'ensemble ····· -->
       <div class="subview" id="sub-apercu">
-        <div class="view-h">
+        <div class="view-h screen-only">
           <h2>Vue d'ensemble</h2>
           <span class="h-sub" id="hSub"></span>
           <div class="h-act">
@@ -59,8 +59,9 @@
 
         <div class="simbar" id="simbar"><span class="dot"></span><span id="simtxt"></span></div>
 
-        <div class="kpis" id="kpis"></div>
-        <div class="kpi-more" id="kpisMore"></div>
+        <!-- PDF : les KPI servent l'utilisateur du simulateur, pas le lecteur du document → écran seulement -->
+        <div class="kpis screen-only" id="kpis"></div>
+        <div class="kpi-more screen-only" id="kpisMore"></div>
 
         <div class="charts">
           <div class="card">
@@ -73,17 +74,20 @@
               <button type="button" class="card-go" data-go="fin">Ouvrir Financement →</button></div>
             <canvas id="cTreso"></canvas>
           </div>
-          <div class="card">
+          <div class="card screen-only">
             <div class="card-h"><h3>Résultat net</h3></div>
             <canvas id="cRN"></canvas>
           </div>
-          <div class="card">
+          <div class="card screen-only">
             <div class="card-h"><h3>Dette nette / EBITDA</h3><span class="sub">seuil d'alerte 3×</span></div>
             <canvas id="cLevier"></canvas>
           </div>
         </div>
 
-        <div class="charts">
+        <!-- PDF seulement : hypothèses chiffrées (construites par renderPrintHyp) -->
+        <div class="print-only" id="printHyp"></div>
+
+        <div class="charts screen-only">
           <div class="card" id="cardStruct">
             <div class="card-h"><h3>Structure financière</h3><span class="sub" id="structSub"></span>
               <button type="button" class="card-go" data-go="fin">Ouvrir Financement →</button></div>
@@ -92,10 +96,10 @@
           <div class="conseil" id="conseil"></div>
         </div>
 
-        <div class="card-h tbl-h"><h3>Compte de résultat condensé</h3>
+        <div class="card-h tbl-h screen-only"><h3>Compte de résultat condensé</h3>
           <span class="sub">le détail complet est dans le pack financier</span>
           <button type="button" class="card-go" data-go="pack">Ouvrir le pack financier →</button></div>
-        <div class="tblwrap tbl-short"><table id="tblMini"></table></div>
+        <div class="tblwrap tbl-short screen-only"><table id="tblMini"></table></div>
       </div><!-- /sub-apercu -->
 
       <!-- ····· Par référence ····· -->
@@ -162,7 +166,7 @@
     <!-- ---------- Vue Pack financier ---------- -->
     <div class="view" id="view-pack" hidden>
       <button type="button" class="crumb" data-go="apercu">← Retour à la vue d'ensemble</button>
-      <div class="view-h">
+      <div class="view-h screen-only">
         <h2>Pack financier</h2><span class="h-sub" id="packSub"></span>
         <div class="h-act">
           <button type="button" class="hbtn" id="btnPackAll">Tout replier</button>

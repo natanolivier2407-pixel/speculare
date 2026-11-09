@@ -1566,6 +1566,7 @@ function refresh(){
   updateFundReadout(R);
   renderKPIs(R,H); renderStructure(R,H); renderStickybar(R); renderConseiller(R,H);
   renderTable(R); renderMiniTable(R); renderFinance(R); renderRefsAnalysis(R); renderDCF(R,H);   // parties DOM (sûres même onglet masqué)
+  renderPrintHyp(R,H,activeList);                           // bloc d'hypothèses du PDF (invisible à l'écran)
   renderActiveCharts();                                     // graphes du seul onglet visible
   saveState(); updatePrintHead();
 }
@@ -1913,7 +1914,9 @@ const PACK_SECTIONS = [
 ];
 
 function renderTable(R){
-  const head=`<tr><th>(en €)</th>${ANNEES.map(a=>`<th>${a}</th>`).join('')}</tr>`;
+  // <thead> explicite : à l'impression, la ligne des années se répète en tête de chaque page
+  // (chaque état financier commence sur sa propre feuille).
+  const head=`<thead><tr><th>(en €)</th>${ANNEES.map(a=>`<th>${a}</th>`).join('')}</tr></thead><tbody>`;
   let curSec='';   // section courante : chaque ligne la porte, pour pouvoir la replier
   const line=(lab,arr,fmt=fEUR,color=false,sec=false,tot=false)=>{
     const tds=arr.map(v=>{
@@ -1987,10 +1990,79 @@ function renderTable(R){
   h+=line("ROCE (après impôt)",R.ROCE,fPCT,false);
   h+=line("Point mort (CA)",R.pointMort,fEUR,false);
   h+=line("Marge de sécurité",R.margeSecu,fPCT);
-  document.getElementById('tbl').innerHTML=h;
+  document.getElementById('tbl').innerHTML=h+'</tbody>';
   applySections();   // restitue les sections repliées, que le rendu vient d'effacer
   const ps=document.getElementById('packSub');
   if(ps) ps.textContent = `${ANNEES[0]} → ${ANNEES[NY-1]} · ${PACK_SECTIONS.length} sections`;
+}
+
+// ============================================================
+//  PDF — hypothèses chiffrées (bloc imprimé seulement, #printHyp)
+//  Document chiffré, sans commentaire. Ce que les états montrent déjà (charges fixes,
+//  personnel, CAPEX) n'est pas répété : seuls les moteurs de ces états figurent ici.
+//  Les séries par référence sont celles du moteur, décisions incluses : Σ volume × prix = CA.
+// ============================================================
+const fPU = x => isFinite(x)? new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:0,maximumFractionDigits:2}).format(x) : "—";
+const fTx = x => isFinite(+x)? (Math.round(+x*100)/100).toString().replace('.',',')+' %' : "—";
+function renderPrintHyp(R,H,actives){
+  const el=document.getElementById('printHyp'); if(!el) return;
+  const ov=H.ov||{}, ser=k=> ov[k] ? ov[k] : new Array(NY).fill(H[k]);
+  const yrs=ANNEES.map(a=>`<th>${a}</th>`).join('');
+  const band=lab=>`<tr class="grouprow"><td colspan="${NY+1}">${lab}</td></tr>`;
+  const line=(lab,arr,fmt,cl)=>`<tr><td${cl?` class="${cl}"`:''}>${lab}</td>${arr.map(v=>`<td>${fmt(v)}</td>`).join('')}</tr>`;
+
+  // 1. Hypothèses par année
+  let h=`<thead><tr><th>Hypothèses</th>${yrs}</tr></thead><tbody>`;
+  h+=band("Activité — par référence");
+  R.refSeries.forEach(r=>{
+    // une référence lancée par décision n'existe pas avant son lancement : « — », pas « 0 € »
+    const on=t=> (r.vol[t]||0)!==0 || (r.prix[t]||0)!==0;
+    const s=(arr,fmt)=>arr.map((v,t)=> on(t)? fmt(v) : '—');
+    h+=`<tr class="hyp-ref"><td colspan="${NY+1}">${esc(r.nom||'Référence')}</td></tr>`;
+    h+=`<tr><td class="hyp-ind">Volume (unités)</td>${s(r.vol,fNB).map(v=>`<td>${v}</td>`).join('')}</tr>`;
+    h+=`<tr><td class="hyp-ind">Prix unitaire</td>${s(r.prix,fPU).map(v=>`<td>${v}</td>`).join('')}</tr>`;
+    h+=`<tr><td class="hyp-ind">Coût variable unitaire</td>${s(r.cout,fPU).map(v=>`<td>${v}</td>`).join('')}</tr>`;
+  });
+  h+=band("Exploitation");
+  h+=line("Délai de paiement clients",ser('DSO'),fJ);
+  h+=line("Délai de paiement fournisseurs",ser('DPO'),fJ);
+  h+=line("Durée de stockage",ser('DIO'),fJ);
+  h+=line("Taux d'impôt sur les sociétés",ser('tauxIS'),fPCT);
+  h+=line("Distribution (part du résultat de l'exercice précédent)",ser('tauxDiv'),fPCT);
+  h+=line("Durée d'amortissement des immobilisations",new Array(NY).fill(H.duree),x=>fNB(x)+' ans');
+  h+='</tbody>';
+
+  // 2. Financement : les emprunts du portefeuille (dette d'ouverture, amorçage, emprunts des décisions)
+  const L=(R.fin&&R.fin.loans)||[];
+  let f=`<thead><tr><th>Emprunts</th><th>Montant</th><th>Taux</th><th>Durée</th><th>Tirage</th></tr></thead><tbody>`;
+  f+= L.length ? L.map(l=>`<tr><td>${esc(l.nom||'Emprunt')}</td><td>${fEUR(+l.montant||0)}</td><td>${fTx(l.taux)}</td>`
+                         +`<td>${l.n} ans</td><td>${l.initial?"à l'ouverture":(ANNEES[l.start]||'N+'+l.start)}</td></tr>`).join('')
+               : `<tr><td colspan="5">Aucun emprunt</td></tr>`;
+  f+='</tbody>';
+
+  // 3. Bilan d'ouverture (les postes saisis + la trésorerie ou le financement déduit)
+  const o=R.ouverture||{};
+  const actO=(H.immoOuv0||0)+(H.openStocks||0)+(H.openCreances||0)+(R.openTreso||0);
+  const pasO=(o.cp||0)+(o.dette||0)+(H.openDettesF||0);
+  const b2=(a,va,p,vp,tot)=>`<tr${tot?' class="tot"':''}><td>${a}</td><td>${va}</td><td>${p}</td><td>${vp}</td></tr>`;
+  let b=`<thead><tr><th>Bilan d'ouverture — actif</th><th></th><th>Bilan d'ouverture — passif</th><th></th></tr></thead><tbody>`;
+  b+=b2("Immobilisations nettes",fEUR(H.immoOuv0),"Capitaux propres",fEUR(o.cp));
+  b+=b2("Stocks",fEUR(H.openStocks),"Dettes financières",fEUR(o.dette));
+  b+=b2("Créances clients",fEUR(H.openCreances),"Dettes fournisseurs",fEUR(H.openDettesF));
+  b+=b2("Trésorerie",fEUR(R.openTreso),"","");
+  b+=b2("Total",fEUR(actO),"Total",fEUR(pasO),true);
+  b+='</tbody>';
+
+  // 4. Décisions intégrées aux prévisions (leurs effets sont déjà dans les tableaux)
+  const D=(actives||[]);
+  const d = D.length ? `<div class="tblwrap"><table class="hyp-dec"><thead><tr><th>Décisions intégrées aux prévisions</th><th>Type</th><th>À partir de</th></tr></thead><tbody>`
+      + D.map(x=>`<tr><td>${esc(x.nom||'')}</td><td>${esc(decType(x.type).label)}</td><td>${ANNEES[x.vals.annee|0]||''}</td></tr>`).join('')
+      + `</tbody></table></div>` : '';
+
+  el.innerHTML = `<div class="tblwrap hyp-wrap"><table class="hyp-tbl">${h}</table></div>`
+    + `<div class="hyp-p2"><div class="tblwrap"><table>${f}</table></div>`
+    + `<div class="tblwrap"><table class="hyp-bil">${b}</table></div>`
+    + d + `</div>`;
 }
 
 // ---- Vue d'ensemble : le compte de résultat en 6 lignes ----
@@ -2048,7 +2120,14 @@ function buildPackNav(){
   });
 }
 
-function mkChart(id,cfg){ if(charts[id])charts[id].destroy(); charts[id]=new Chart(document.getElementById(id),cfg); }
+// printMode : graphes dessinés pour le PDF — sans animation (sinon l'impression fige des barres
+// à mi-hauteur) et sans couleur de jugement. Piloté par chartsForPrint() et l'export.
+let printMode=false;
+function mkChart(id,cfg){
+  if(charts[id])charts[id].destroy();
+  if(printMode) cfg.options=Object.assign({},cfg.options,{animation:false});
+  charts[id]=new Chart(document.getElementById(id),cfg);
+}
 // Palette validée (dataviz) : catégorielle bleu/aqua/jaune + statuts vert/rouge
 const C={blue:'#2a78d6',aqua:'#1baf7a',yellow:'#eda100',good:'#0ca30c',critical:'#d03b3b',warning:'#fab219',
          blueLight:'#a9c7ef',aquaLight:'#8fd8bd',baseGray:'#cdccc4',
@@ -2066,13 +2145,15 @@ function renderCharts(R){
     options:{responsive:true,plugins:{legend:LEG()},scales:axes}});
 
   // Le remplissage bascule au passage du zéro : un trou de trésorerie se voit d'un coup d'œil,
-  // sans avoir à lire l'axe.
+  // sans avoir à lire l'axe. À l'IMPRESSION, une seule couleur : le PDF est un document chiffré
+  // destiné au banquier, il ne qualifie pas les chiffres (ni rouge, ni vert).
+  const tPt = printMode ? C.blue : R.tresoClot.map(v=>v<0?C.critical:C.good);
   mkChart('cTreso',{type:'line',data:{labels:ANNEES,datasets:[
       {label:'Trésorerie',data:R.tresoClot,borderColor:C.blue,borderWidth:2,
-       fill:{target:{value:0}, above:'rgba(42,120,214,.10)', below:'rgba(208,59,59,.20)'},
+       fill:{target:{value:0}, above:'rgba(42,120,214,.10)', below:printMode?'rgba(42,120,214,.10)':'rgba(208,59,59,.20)'},
        tension:.3,pointRadius:4,pointHoverRadius:6,
-       pointBackgroundColor:R.tresoClot.map(v=>v<0?C.critical:C.good),
-       pointBorderColor:R.tresoClot.map(v=>v<0?C.critical:C.good)},
+       pointBackgroundColor:tPt,
+       pointBorderColor:tPt},
       {label:'Zéro',data:ANNEES.map(()=>0),borderColor:C.axis,borderWidth:1,pointRadius:0,fill:false}
     ]},
     options:{responsive:true,plugins:{legend:LEG(false)},scales:axes}});
@@ -2090,6 +2171,15 @@ function renderCharts(R){
     options:{responsive:true,plugins:{legend:LEG()},
       scales:{x:{grid:{display:false},ticks:TICK},y:{grid:GRID,ticks:{...TICK,callback:v=>v+'×'}}}}});
 }
+// ---- Impression : les graphes de la vue d'ensemble passent en mode PDF, quel que soit le
+// déclencheur (bouton Export ou Ctrl+P), puis retrouvent leurs couleurs après l'impression.
+function chartsForPrint(on){
+  if(printMode===on) return;
+  printMode=on;
+  if(lastR && currentView==='sim' && currentSub==='apercu') renderCharts(lastR);
+}
+window.addEventListener('beforeprint',()=>chartsForPrint(true));
+window.addEventListener('afterprint', ()=>chartsForPrint(false));
 
 // ============================================================
 //  SECTION FINANCEMENT — 3 graphes + tableau d'amortissement consolidé
@@ -2345,7 +2435,18 @@ function openExportModal(){
       docCompany=document.getElementById('expCompany').value.trim();
       docSubtitle=document.getElementById('expSubtitle').value.trim();
       saveState(); updatePrintHead(); m.classList.remove('open');
-      setTimeout(()=>window.print(), 80);   // laisse la modale se fermer avant le dialogue d'impression
+      // Les graphes de la vue d'ensemble ne sont dessinés que quand elle est affichée : un export
+      // lancé depuis le pack sortirait avec des graphes vides ou périmés. On y passe le temps de
+      // l'impression, graphes dessinés directement en mode PDF (printMode), puis on revient.
+      const cur=document.querySelector('.rail .nav.on[data-go]');
+      const back=cur? cur.dataset.go : 'apercu';
+      printMode=true;
+      navigate('apercu');
+      setTimeout(()=>{                      // laisse la modale se fermer avant le dialogue d'impression
+        window.print();
+        chartsForPrint(false);              // déjà fait par « afterprint » si le navigateur l'émet
+        if(back!=='apercu') navigate(back);
+      }, 80);
     };
     document.getElementById('expGo').addEventListener('click',go);
     m.querySelectorAll('.exp-input').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } }));
