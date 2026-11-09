@@ -2034,7 +2034,9 @@ function renderPrintHyp(R,H,actives){
 
   // 2. Financement : les emprunts du portefeuille (dette d'ouverture, amorçage, emprunts des décisions)
   const L=(R.fin&&R.fin.loans)||[];
-  let f=`<thead><tr><th>Emprunts</th><th>Montant</th><th>Taux</th><th>Durée</th><th>Tirage</th></tr></thead><tbody>`;
+  // bandeau bleu en tête (même style que les sections du pack), puis les intitulés de colonnes
+  let f=`<thead><tr class="grouprow"><td colspan="5">Emprunts</td></tr>`
+       +`<tr><th>Emprunt</th><th>Montant</th><th>Taux</th><th>Durée</th><th>Tirage</th></tr></thead><tbody>`;
   f+= L.length ? L.map(l=>`<tr><td>${esc(l.nom||'Emprunt')}</td><td>${fEUR(+l.montant||0)}</td><td>${fTx(l.taux)}</td>`
                          +`<td>${l.n} ans</td><td>${l.initial?"à l'ouverture":(ANNEES[l.start]||'N+'+l.start)}</td></tr>`).join('')
                : `<tr><td colspan="5">Aucun emprunt</td></tr>`;
@@ -2045,7 +2047,8 @@ function renderPrintHyp(R,H,actives){
   const actO=(H.immoOuv0||0)+(H.openStocks||0)+(H.openCreances||0)+(R.openTreso||0);
   const pasO=(o.cp||0)+(o.dette||0)+(H.openDettesF||0);
   const b2=(a,va,p,vp,tot)=>`<tr${tot?' class="tot"':''}><td>${a}</td><td>${va}</td><td>${p}</td><td>${vp}</td></tr>`;
-  let b=`<thead><tr><th>Bilan d'ouverture — actif</th><th></th><th>Bilan d'ouverture — passif</th><th></th></tr></thead><tbody>`;
+  let b=`<thead><tr class="grouprow"><td colspan="4">Bilan d'ouverture</td></tr>`
+       +`<tr><th>Actif</th><th></th><th>Passif</th><th></th></tr></thead><tbody>`;
   b+=b2("Immobilisations nettes",fEUR(H.immoOuv0),"Capitaux propres",fEUR(o.cp));
   b+=b2("Stocks",fEUR(H.openStocks),"Dettes financières",fEUR(o.dette));
   b+=b2("Créances clients",fEUR(H.openCreances),"Dettes fournisseurs",fEUR(H.openDettesF));
@@ -2055,7 +2058,8 @@ function renderPrintHyp(R,H,actives){
 
   // 4. Décisions intégrées aux prévisions (leurs effets sont déjà dans les tableaux)
   const D=(actives||[]);
-  const d = D.length ? `<div class="tblwrap"><table class="hyp-dec"><thead><tr><th>Décisions intégrées aux prévisions</th><th>Type</th><th>À partir de</th></tr></thead><tbody>`
+  const d = D.length ? `<div class="tblwrap"><table class="hyp-dec"><thead><tr class="grouprow"><td colspan="3">Décisions intégrées aux prévisions</td></tr>`
+      + `<tr><th>Décision</th><th>Type</th><th>À partir de</th></tr></thead><tbody>`
       + D.map(x=>`<tr><td>${esc(x.nom||'')}</td><td>${esc(decType(x.type).label)}</td><td>${ANNEES[x.vals.annee|0]||''}</td></tr>`).join('')
       + `</tbody></table></div>` : '';
 
